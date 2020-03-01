@@ -1,0 +1,104 @@
+#!/bin/bash
+#______________________________________
+
+function FUNCTION()
+{
+ # READS 'backup.cfg' FILE AND DETERMINES IF THERE ARE PRESET REMOTE BACKUP
+ # WICH NEEDS TO BE VERIFIED WITH THIS SCRIPT (THEY EXIST IN 'backup.cfg' FILE
+ # AND AREN'T MARKED TO HIDE)
+
+ REMOTE=N; VAR=""
+ while [ "$VAR" != "#eof" ]
+ do read VAR
+    if [ ! -z "$(echo "$VAR" | grep "@")" ] && [ $(expr substr "$VAR" 1 1) != "#" ]
+    then REMOTE=Y
+    fi
+ done < "$BACKUP_CFG"
+
+ if [ $REMOTE = Y ] && [[ $(ls "$WORKDIR") == *"_list" ]]
+ then setterm -cursor off
+      echo -e " "$C_GR"Found preset local backups"$C_0""
+      sleep 1
+      echo -e " "$C_GR"Checking preset remote backups. Wait..."$C_0""
+      sleep 2
+ elif [ $REMOTE = Y ]
+ then setterm -cursor off
+      echo -e " "$C_RED"Not found preset local backups"$C_0""
+      sleep 1
+      echo -e " "$C_GR"Checking preset remote backups. Wait..."$C_0""
+      sleep 2
+ else exit
+ fi
+ unset REMOTE VAR
+
+
+ # FILE TO TEST RSYNC (EXISTS REMOTE DIR?)
+ touch ""$WORKDIR"/a"
+
+
+ # READS 'backup.cfg' LINE BY LINE.
+ NUM_L=0
+ L_SRC=""
+ while true
+ do read L_SRC
+    let NUM_L+=1
+    if [ "$L_SRC" = "#eof" ]; then break; fi
+
+    if  [ -n "$L_SRC" ] && [ $(echo ${L_SRC:0:1}) != "#" ]
+    then read L_DEST
+         let NUM_L+=1
+
+         if [ "$DISTRO" = debian ]
+         then SRC=$(echo "$L_SRC" | sed "s,^/run/media/"$USER",/media/"$USER",g")
+              DEST=$(echo "$L_DEST" | sed "s,^/run/media/"$USER",/media/"$USER",g")
+         elif [ "$DISTRO" = arch ]
+         then SRC=$(echo "$L_SRC" | sed "s,^/media/"$USER",/run/media/"$USER",g")
+              DEST=$(echo "$L_DEST" | sed "s,^/media/"$USER",/run/media/"$USER",g")
+         fi
+         #################################################################
+
+         # CHECK: THERE AREN'T REMOTE DIRECTORIES.
+         if [ -z "$(echo "$SRC" | grep "@")" ] &&
+            [ -z "$(echo "$DEST" | grep "@")" ]
+         then unset L_SRC L_DEST SRC DEST
+
+
+         # CHECK: LOCAL SOURCE - REMOTE DESTINATION.
+         elif [ -e "$SRC" ]
+         then CHECK=Y
+              CHECK_IP="$(echo "$DEST" | awk -F":" '{print $1}')"
+
+         # CHECK: REMOTE SOURCE - LOCAL DESTINATION.
+         elif [ -e "$DEST" ]
+         then CHECK=Y
+              CHECK_IP="$(echo "$SRC" | awk -F":" '{print $1}')"
+         fi
+         #################################################################
+
+         # TRY TO CONNECT WITH REMOTE SOURCE OR DESTINATION.
+         # IF CONNECT, STORE REMOTE ORIGIN/DESTINATION IN THE CORRECT TEXT FILE.
+         if [ "$CHECK" = Y ]
+         then timeout 5 rsync -zzavhin ""$WORKDIR"/a" "$CHECK_IP:/tmp" &>/dev/null
+              if [ $? = 0 ]
+              then echo "$SRC"   >> ""$WORKDIR"/sources_list"
+                   echo "$DEST"  >> ""$WORKDIR"/destinations_list"
+                   echo "$NUM_L" >> ""$WORKDIR"/lines_number_list"
+              fi
+         fi
+    fi
+    unset SRC DEST CHECK CHECK_IP
+ done < "$BACKUP_CFG"
+
+ rm ""$WORKDIR"/a"
+}
+
+#################################################
+######  S T A R T   E X E C U T I N G ###########
+#################################################
+C_0="\e[0m"
+C_GR="\e[0;3;38;2;0;251;102m"
+C_RED="\e[1;3;31m"
+WORKDIR="/tmp/bkp_workdir"
+
+#####################################################################
+#####################################################################

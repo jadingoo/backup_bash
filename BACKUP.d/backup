@@ -1,0 +1,866 @@
+#! /bin/bash 
+#__________________________________________________________
+function TITLE() {
+ tput reset
+ echo -e ""$C_0"
+   ___  ____ ____ _  _ _  _ ___
+   |__] |__| |    |_/  |  | |__]
+   |__] |  | |___ | \_ |__| |
+                             \n"
+}
+
+#__________________________________________________________
+function DEPENDENCES()
+{
+ ### CKECK DEPENDENCES (xfce4-terminal / screen / gedit / rsync) ###
+
+ # TRYING TO INSTALL DEPENDENCES IF THEY AREN'T INSTALLED YET.
+ DEPS=(xfce4-terminal screen gedit rsync)
+ for dep in ${DEPS[@]}
+ do if [ ! $(which $dep 2>/dev/null) ]
+    then tput reset
+         echo -e "\n$C_GR_BOLD Installing "$dep"...$C_0\n"
+         sleep 3
+         $PKGMGR "$dep" 2>/dev/null
+         if [ $? = 0 ]
+         then echo -e "\n\n$C_GR_BOLD "$dep":$C_0 Successfully Installed"
+              sleep 3
+         else echo -e ""$C_RED" ERROR"$C_0": It wasn't possible to install $dep\n"
+              sleep 3
+         fi
+         tput reset
+    fi
+ done
+
+ # IF HAVEN'T BEEN POSSIBLE TO INSTALL ANY DEPENDENCE, INFORM AND EXIT.
+ for dep in ${DEPS[@]}
+ do if [ ! $(which $dep 2>/dev/null) ]
+    then DEPS_OK=NO
+         echo -e "
+         \r" $C_REDLIGHT" ERROR $C_0: Install$C_RED $dep$C_0 to continue"
+    fi
+ done
+
+ if [ "$DEPS_OK" = "NO" ]
+ then sleep 1.5
+      INT_HANDLER  # FUNCTION CALL
+ fi
+}
+
+#__________________________________________________________
+PARAM_CHECK()
+{
+ # CHECK PARAMETERS
+
+ SRC_DEST_TYPE       # FUNCTION CALL
+ TITLE               # FUNCTION CALL
+ CHECK_NEW_SRC       # FUNCTION CALL
+
+ ## PARAMETERS: LOCAL DIRECTORIES
+ if [[ -e $SRC ]] && [[ -e $DEST ]]
+ then CHECK=Y
+      F_SIMULATION   # FUNCTION CALL
+      TITLE          # FUNCTION CALL
+      ENCODE         # FUNCTION CALL
+      DECODE         # FUNCTION CALL
+      MK_AUX_SCRIPT  # FUNCTION CALL
+
+ ## PARAMETERS: REMOTE DIRECTORIES
+ elif [ ! -z "$(echo "$SRC $DEST" | grep "@")" ]
+ then # CHECK: LOCAL SOURCE - REMOTE DESTINATION.
+      if [ -e "$SRC" ]
+      then  CHECK=Y
+            CHECK_IP="$(echo "$DEST" | awk -F":" '{print $1}')"
+
+      # CHECK: REMOTE SOURCE - LOCAL DESTINATION.
+      elif [ -e "$DEST" ]
+      then CHECK=Y
+           CHECK_IP="$(echo "$SRC" | awk -F":" '{print $1}')"
+      fi
+
+      if [ "$CHECK" = Y ]
+      then touch ""$WORKDIR"/a"
+           timeout 5 rsync -zzan ""$WORKDIR"/a" "$CHECK_IP:/tmp" &>/dev/null
+           if [ $? = 0 ]
+           then F_SIMULATION   # FUNCTION CALL
+                TITLE          # FUNCTION CALL
+                ENCODE         # FUNCTION CALL
+                DECODE         # FUNCTION CALL
+                MK_AUX_SCRIPT  # FUNCTION CALL
+           else unset CHECK
+           fi
+           rm ""$WORKDIR"/a"
+      fi
+ fi
+ ## INCORRECT PARAMETERS
+ if [ "$CHECK" != Y ]
+ then setterm -cursor off
+      echo -e "\n"  $C_REDLIGHT"INCORRECT SOURCE AND/OR DESTINATION"$C_0"\n\n"
+      sleep 3
+      rm -fr $WORKDIR
+      rm "$LOCK"
+      setterm -cursor on
+      exit 1
+ fi
+ unset CHECK CHECK_IP
+}
+
+#__________________________________________________________
+function F_SIMULATION()
+{
+ ### ASK: MAKE CHANGES DIRECTLY OR SHOW THEM BEFORE DECIDE? ###
+
+ TITLE  # FUNCTION CALL
+ echo -en "\n "$C_BL_LIGHT"START IN SIMULATION MODE? [Y/n]"$C_0" "
+ read -n1 SIMULATION
+ case $SIMULATION in
+   y|Y|n|N) SIMULATION=$(echo $SIMULATION | tr '[:lower:]' '[:upper:]')
+   ;;
+   $INTRO)  SIMULATION=Y
+   ;;
+   $ESC)    TITLE         # FUNCTION CALL
+            INT_HANDLER   # FUNCTION CALL
+   ;;
+   º)       echo -en "\n "
+            $SUDO screen -d -m gedit $0
+            F_SIMULATION  # FUNCTION CALL
+   ;;
+   *)       F_SIMULATION  # FUNCTION CALL
+ esac
+ tput reset
+}
+
+#__________________________________________________________
+function SRC_DEST_TYPE()
+{
+ ### CHECK SRC AND DEST AND ASSIGN:
+ ### VALOR [d], [f] OR [@] IF ARE DIRECTORY, FILE OR REMOTE.
+
+ if [ -z $(echo "$SRC" | grep "@") ]
+ then if [ -z $(file --mime-type "$SRC" | grep -o directory) ]
+      then SRC_TYPE="f"
+      else SRC_TYPE="d"
+      fi
+      C_SRC="$C_BL2"
+
+ else SRC_TYPE="@"
+      C_SRC="$C_RED"
+ fi
+
+
+ if [ -z $(echo "$DEST" | grep "@") ]
+ then if [ -z $(file --mime-type "$DEST" | grep -o directory) ]
+      then DEST_TYPE="f"
+      else DEST_TYPE="d"
+      fi
+      C_DEST="$C_BL2"
+
+ else DEST_TYPE="@"
+      C_DEST="$C_RED"
+ fi
+
+
+ # VARIABLES TO SHOW SOURCE AND DESTINATION IN STDOUT.
+ SHOW_SRC="\n  "$C_BL2"["$C_SRC""$SRC_TYPE""$C_BL2"] "$C_BL"SRC : "$C_0"'"$SRC"'"
+ SHOW_DEST="  "$C_BL2"["$C_DEST""$DEST_TYPE""$C_BL2"] "$C_BL"DEST: "$C_0"'"$DEST"'"
+}
+
+#__________________________________________________________
+function ENCODE()
+{
+ ### ASK: CONFIRM PRESET BACKUP DIRECTORIES? ###
+ ### GENERATES SEQUENCE IN X X X X FORMAT, WHERE X TAKES "Y" OR "N" VALUES. ###
+ ### X X X X --> SIMULATION - CONFIRM DIRS - DELETE IN DEST - HIDE DIRS ###
+
+ unset CONFIRMDIR DELETE HIDE CODE
+ CONFIRMDIR=Y
+ DELETE=N
+ HIDE=N
+
+ tput sc
+ echo -e " ______________________________"
+ echo -e " "$C_BL_LIGHT"Use the following directories?"$C_0"\n"
+ echo -e "$SHOW_SRC"
+ echo -e "$SHOW_DEST"
+ echo -en "\n "$C_GR"Confirm [Y/n]:"$C_0" "
+
+ read  -n1 CONFIRMDIR
+ case $CONFIRMDIR in
+   y|Y|$INTRO) CONFIRMDIR=Y
+               tput cuu1
+               echo -en "\n "$C_GR"Confirm [Y/n]:"$C_0" Y"
+               DEL_F        # FUNCTION CALL
+   ;;
+   n|N)        tput cuu1
+               echo -en "\n "$C_GR"Confirm [Y/n]:"$C_0" N"
+               HIDE_D       # FUNCTION CALL
+   ;;
+   $ESC)       TITLE        # FUNCTION CALL
+               INT_HANDLER  # FUNCTION CALL
+   ;;
+   *)          tput rc; tput ed;
+               ENCODE       # FUNCTION CALL
+ esac
+
+ CODE=($(echo "$SIMULATION $CONFIRMDIR $DELETE $HIDE" | tr '[:lower:]' '[:upper:]'))
+}
+
+#__________________________________________________________
+function DEL_F()
+{
+ ### ASK: DELETE DIFFERENCES IN DEST? ###
+ if [ ! -f "$SRC" ] && [ ! -f "$DEST" ]
+ then tput sc
+      echo -en "\n "$C_GR"Delete destination differences [y/N]:"$C_0" "
+
+      read -n1 DELETE
+
+      case $DELETE in
+        y|Y|n|N) DELETE=$(echo $DELETE | tr '[:lower:]' '[:upper:]')
+        ;;
+        $INTRO)  DELETE=N
+        ;;
+        $ESC)    TITLE        # FUNCTION CALL
+                 INT_HANDLER  # FUNCTION CALL
+        ;;
+        *)       tput rc; tput ed
+                 DEL_F        # FUNCTION CALL
+      esac
+
+      tput rc; tput ed
+      echo -e "\n "$C_GR"Delete destination differences [y/N]:"$C_0" $DELETE\n"
+
+  else echo -e "\n\n"
+ fi
+}
+
+#__________________________________________________________
+function HIDE_D()
+{
+ ### ASK: HIDE THESE DIRECTORIES? ("Y" WILL MODIFY 'backup.cfg') ###
+
+ tput sc
+ echo -en "\n "$C_RED"Hide these directories? [y/N]:"$C_0" "
+
+ read -n1 HIDE
+ case $HIDE in
+   y|Y|n|N) HIDE=$(echo $HIDE | tr '[:lower:]' '[:upper:]')
+            if [ $HIDE = "Y" ]
+            then HIDE_SRC=$(expr $NUM_L - 1)
+                 HIDE_DEST=$NUM_L
+
+                 $SUDO sed -i ""$HIDE_SRC"s;$SRC;#$SRC;g" "$BACKUP_CFG"
+                 $SUDO sed -i ""$HIDE_DEST"s;$DEST;#$DEST;g" "$BACKUP_CFG"
+            fi
+   ;;
+   $INTRO)  HIDE=N
+   ;;
+   $ESC)    TITLE        # FUNCTION CALL
+            INT_HANDLER  # FUNCTION CALL
+   ;;
+   *)       tput rc; tput ed
+            HIDE_D       # FUNCTION CALL
+ esac
+
+ tput rc; tput ed
+ echo -e "\n "$C_RED"Hide these directories? [y/N]:"$C_0" "$HIDE"\n"
+}
+
+#__________________________________________________________
+function DECODE()
+{
+ ### SET SYNCHRONIZATION OPTIONS BASED ON $CODE VALUES. ###
+
+ # CODE = SIMULATION CONFIRMDIR DELETE HIDE
+ unset RS
+ case ${CODE[@]} in
+   "Y Y Y N") RS='rsync -zzavhin --log-format=\"[%t] %i %n %L\" --delete'
+   ;;
+   "Y Y N N") RS='rsync -zzavhin --log-format=\"[%t] %i %n %L\"'
+   ;;
+   "N Y Y N") RS='rsync -zzavhi --log-format=\"[%t] %i %n %L\" --delete'
+   ;;
+   "N Y N N") RS='rsync -zzavhi --log-format=\"[%t] %i %n %L\"'
+   ;;
+   "Y N N Y"|"N N N Y") # HIDED DIRS
+                        >/dev/null
+ esac
+
+ # Y N N N  --> IT WON'T DO BACKUP
+ # N N N N  --> AND WON'T HIDE PRESET DIRECTORIES.
+}
+
+#__________________________________________________________
+function MK_AUX_SCRIPT()
+{
+ ### CREATE 'aux_script' SCRIPT ###
+ ### IN SIMULATION MODE: 'aux_script' WILL EXECUTE RSYNC AND
+ ### WILL ASK USER TO CONFIRM OR DISCARD RESULTS. ###
+ ### IN NO-SIMULATION MODE: 'aux_script' WILL GENERATE 'ok_rsync' FILE DIRECTLY ###
+
+ if [[ ${CODE[1]} = "Y" ]]
+ then
+   if [ ! -f $AUX_SCRIPT ]
+   then cp -fr "$SCRIPTS"/aux_script $AUX_SCRIPT
+   fi
+
+   if [[ -n $(echo $RS | grep "\-\-delete") ]]
+   then DEL="--delete"
+   else DEL=""
+   fi
+
+   echo 'SRC='"'"$SRC"'"                  >> $AUX_SCRIPT
+   echo 'DEST='"'"$DEST"'"                >> $AUX_SCRIPT
+   echo "SRC_TYPE=\"$SRC_TYPE\""          >> $AUX_SCRIPT
+   echo "DEST_TYPE=\"$DEST_TYPE\""        >> $AUX_SCRIPT
+   echo "C_SRC=\"$C_SRC\""                >> $AUX_SCRIPT
+   echo "C_DEST=\"$C_DEST\""              >> $AUX_SCRIPT
+   echo "SIMULATION=\"${CODE[0]}\""       >> $AUX_SCRIPT
+   echo "DEL=\"$DEL\""                    >> $AUX_SCRIPT
+   echo "RS=\"$RS\""                      >> $AUX_SCRIPT
+   echo "FUNCTION  # FUNCTION CALL"       >> $AUX_SCRIPT
+   echo  -e "\n#_______________"          >> $AUX_SCRIPT
+ fi
+}
+
+#__________________________________________________________
+function ADD_DIRS()
+{
+ ### ASK: ADD NEW BACKUP DIRECTORIES TO 'backup.cfg' FILE? ###
+
+ TITLE  # FUNCTION CALL
+ if [[ $(ls "$WORKDIR") != *"_list" ]] && [ ! -f "$AUX_SCRIPT" ]
+ then echo -en "\n "$C_GR"There isn't any preset backup."$C_0"\
+               \n "$C_GR"Add directories to make backup? [y/N]:"$C_0" "
+ else echo -en "\n "$C_GR"There isn't more preset backups."$C_0"\
+               \n "$C_GR"Add more directories to make backup? [y/N]:"$C_0" "
+ fi
+ tput sc
+ read -n1 NEW_DIRS
+
+ case $NEW_DIRS in
+   y|Y) echo -e "\b$(echo "$NEW_DIRS" | tr '[:lower:]' '[:upper:]')"
+
+     # ASK FOR NEW SOURCE AND DESTINATION.
+     echo -en "\n\n"$C_BL2"  [?] "$C_BL"SRC :"$C_0" "
+     read NEW_SRC
+     echo -en ""$C_BL2"  [?] "$C_BL"DEST:"$C_0" "
+     read NEW_DEST
+
+     # REMOVE WHITE SPACES AT THE END OF SOURCE/DESTINATION.
+     SRC=$(echo $NEW_SRC | sed 's; $;;g')
+     DEST=$(echo $NEW_DEST | sed 's; $;;g')
+
+     # REMOVE SIMPLE QUOTES AT BEGINNING/END OF SOURCE/DESTINATION.
+     SRC=$(echo -e "$SRC" | sed "s;^'\|'$;;g")
+     SRC=$(echo -e "$SRC" | sed "s;'/$;/;g")  # 'SOURCE'/  ->  SOURCE/
+     DEST=$(echo -e "$DEST" | sed "s;^'\|'$;;g")
+
+     # WHEN NEW SRC IS A DIRECTORY,
+     # CHECK IF MUST MAKE A BACKUP OF ITSELF OR ONLY OF ITS CONTENT.
+     CHECK_NEW_SRC  # FUNCTION ALL
+
+     # DELETE LAST LINE (#eof] OF 'backup.cfg' FILE.
+     EOF_LINE=$(grep -n "#eof" "$BACKUP_CFG" | cut -d":" -f1)
+     $SUDO sed -i ""$EOF_LINE"d" "$BACKUP_CFG"
+
+     # ADD SOURCE/DESTINATION DIRECTORIES TO 'backup.cfg' FILE.
+     $SUDO sed -i '$a ldkjsaei' "$BACKUP_CFG"
+     $SUDO sed -i "s;ldkjsaei;#\n$SRC;g" "$BACKUP_CFG"
+
+     $SUDO sed -i '$a amvyewmf' "$BACKUP_CFG"
+     $SUDO sed -i "s;amvyewmf;$DEST;g" "$BACKUP_CFG"
+
+     # ADD '#eof' TO THE 'backup.cfg' FILE AGAIN.
+     $SUDO sed -i '$a #eof' "$BACKUP_CFG"
+
+     # CALLING FUNCTIONS TO PROCESS NEW SOURCE/DESTINATION DIRECTORIES.
+     SRC_DEST_TYPE  # FUNCTION CALL
+     DEL_F          # FUNCTION CALL
+     CODE=($(echo "$SIMULATION  Y $DELETE N" | tr '[:lower:]' '[:upper:]'))
+     DECODE         # FUNCTION CALL
+     MK_AUX_SCRIPT  # FUNCTION CALL
+     ADD_DIRS       # FUNCTION CALL
+
+   ;;
+   n|N|$INTRO) tput rc; echo -n "N "
+   ;;
+   *) unset NEW_DIRS
+      ADD_DIRS      # FUNCTION CALL
+ esac
+}
+
+#__________________________________________________________
+CHECK_NEW_SRC()
+{
+ ### WHEN NEW SRC IS A DIRECTORY,
+ ### CHECK IF MUST MAKE A BACKUP OF ITSELF OR ONLY OF ITS CONTENT.
+
+ tput sc
+ if [ -d "$SRC" ] && [ $(echo ${SRC: -1}) != "/" ]
+ then echo -en "\n Source is a local directory.  You can:\
+         \n  "$C_GR"[y]"$C_0" Backup source \e[4mfolder\e[0m  into destination. (default)\
+         \n  "$C_GR"[n]"$C_0" Backup source \e[4mcontent\e[0m into destination.\
+         \n\n Do you want to backup source folder into destination? [Y/n]: "
+      read -n1 VAR
+      case $VAR in
+        y|Y|$INTRO) >/dev/null
+        ;;
+        n|N) SRC="$SRC/"
+        ;;
+        *) tput rc; tput ed
+           CHECK_NEW_SRC      # FUNCTION CALL
+      esac
+      unset VAR
+ fi
+
+ SRC_DEST_TYPE  # FUNCTION CALL
+ tput cup 10 0
+ echo -e "$SHOW_SRC"
+ echo -e "$SHOW_DEST"
+ tput rc; tput ed
+}
+
+#__________________________________________________________
+function LOCAL_SEARCH()
+{
+ # SEARCH FOR PRESET LOCAL DIRECTORIES TO BACKUP IN 'backup.cfg' FILE.
+ # DEBIAN --> /run/media/$USER...   =   /media/$USER...
+ # ARCH   --> /media/$USER          =   /run/media/$USER...
+ # CREATE SOURCE AND DESTINATION LISTS WITH LOCAL PRESET DIRECTORIES.
+
+ NUM_L=0 #  VALUE OF THIS VARIABLE WILL BE THE LINE NUMBER OF EACH
+         #+ SOURCE/DESTINATION IN 'backup.cfg' FILE.
+         #+ IT'S REQUIRED IN 'HIDE_D" FUNCTION.
+ L_SRC=""
+ while true
+ do read L_SRC
+    let NUM_L+=1
+    if [ "$L_SRC" = "#eof" ]; then break; fi
+
+    if  [ -n "$L_SRC" ] && [ $(echo ${L_SRC:0:1}) != "#" ]
+    then read L_DEST
+         let NUM_L+=1
+
+         if [ "$DISTRO" = debian ]
+         then SRC=$(echo "$L_SRC" |
+                    sed "s,^/run/media/"$USER",/media/"$USER",g")
+              DEST=$(echo "$L_DEST" |
+                     sed "s,^/run/media/"$USER",/media/"$USER",g")
+
+         elif [ "$DISTRO" = arch ]
+         then SRC=$(echo "$L_SRC" |
+                    sed "s,^/media/"$USER",/run/media/"$USER",g")
+              DEST=$(echo "$L_DEST" |
+                     sed "s,^/media/"$USER",/run/media/"$USER",g")
+         fi
+
+         if [ -e "$SRC" ] && [ -e "$DEST" ]
+         then echo "$SRC"   >> ""$WORKDIR"/sources_list"
+              echo "$DEST"  >> ""$WORKDIR"/destinations_list"
+              echo "$NUM_L" >> ""$WORKDIR"/lines_number_list"
+         fi
+    fi
+    unset SRC DEST
+ done < "$BACKUP_CFG"
+}
+
+#__________________________________________________________
+function REMOTE_SEARCH()
+{
+ # SEARCH FOR PRESET REMOTE DIRECTORIES TO BACKUP IN 'backup.cfg' FILE.
+ # IF THERE ARE PRESET REMOTE DIRECTORIES TO BACKUP, ADDS THEM TO
+ # SOURCE AND DESTINATIONS ARRAYS.
+ if [ $(grep -c "@" "$BACKUP_CFG") != 0 ]
+ then cp -fr ""$SCRIPTS"/remote_script" "$REMOTE_SCRIPT"
+      echo "BACKUP_CFG=$BACKUP_CFG"  >> "$REMOTE_SCRIPT"
+      echo "DISTRO="$DISTRO""        >> "$REMOTE_SCRIPT"
+      echo "FUNCTION"                >> "$REMOTE_SCRIPT"
+      bash "$REMOTE_SCRIPT"
+ fi
+}
+
+#__________________________________________________________
+function INT_HANDLER()
+{
+ ### BREAKING SCRIPT EXECUTION (CTRL+C - ESC). ###
+
+ echo -e "\n\n "$C_REDLIGHT" Script Interrupted $C_0
+          \r__________________________________________________\n\n"
+ rm -fr $WORKDIR
+
+ # CLEAR EMPTY DIRECTORIES INTO BACKUP_LOGS DIR.
+ find $HOME/backup_logs -type d -empty -exec rm -fr {} \; &>/dev/null
+
+ # DELETE BACKUP_LOGS DIR IF IT'S EMPTY.
+ find $HOME/backup_logs -type d -empty -exec rm -fr {} \; &>/dev/null
+
+ sleep 1
+ rm "$BASE"/backup.lock
+ exit 1
+}
+
+#__________________________________________________________
+function THE_END()
+{
+ ### FINISHING SCRIPT ###
+
+ TITLE  # FUNCTION CALL
+
+ if [ -f "$WORKDIR"/err_global ]
+ then echo -e "   "$C_REDLIGHT"FINISHED WITH ERRORS$C_0\n\n\n"
+ else echo -e "   "$C_GR_LIGHT"SUCCESSFULLY FINISHED"$C_0"\n\n\n"
+ fi
+
+ sleep 2
+ rm -fr $WORKDIR
+
+ # CLEAR EMPTY DIRECTORIES INTO BACKUP_LOGS DIR.
+ find $HOME/backup_logs -type d -empty -exec rm -fr {} \; &>/dev/null
+
+ # DELETE BACKUP_LOGS DIR IF IT'S EMPTY.
+ find $HOME/backup_logs -type d -empty -exec rm -fr {} \; &>/dev/null
+
+ # CHECK IF THERE ARE CHANGES IN $LOG FILE AND OPEN IT AT THE BEGINNING OF LAST ENTRY.
+ if [[ $SHA_LOG != $(sha512sum $LOG) ]]
+ then    echo -e "\n\t\t\t********** BACKUP FINISHED **********" >> $LOG
+         screen -d -m gedit +$(expr 4 + $LAST_LOG_LINE) $LOG
+ fi &>/dev/null
+
+ # CHECK IF THERE ARE CHANGES IN $ERRORS_LOG FILE AND OPEN IT AT THE BEGINNING OF LAST ENTRY.
+ if [[ $SHA_ERRORS_LOG != $(sha512sum $ERRORS_LOG) ]]
+ then    echo -e "\n\t\t\t********** FINISHED **********" >> $ERRORS_LOG
+         screen -d -m gedit +$(expr 3 + $LAST_ERR_LOG_LINE) $ERRORS_LOG
+ fi &>/dev/null
+
+ sleep 0.1   # Allow to open logs files if script is executed from dock.
+
+ rm "$LOCK"
+ exit 0
+}
+
+#__________________________________________________________
+function HELP()
+{
+ echo -e "
+   \n USAGE:  backup [OPTION...] [SOURCE...] [DESTINATION...]"
+ echo -e " Options:  -c, --content\tSync only content, excluding source folder.
+           -h, --help\tShow this message and exit.\n\n"
+
+ rm -frv "$WORKDIR" "$LOCK" >/dev/null
+ exit
+
+}
+
+###################################################
+###### S T A R T   E X E C U T I N G ##############
+###################################################
+
+##############################
+### SETTING VARIABLES ########
+ #+ COLOR
+C_0="\e[0m"
+C_GR="\e[0;3;38;2;0;251;102m"
+C_GR_BOLD="\e[0;1;32m"
+C_GR_LIGHT="\e[1;38;2;0;0;0m\e[48;2;0;255;0m"
+C_RED="\e[0;1;31m"
+C_REDLIGHT="\e[1;38;2;100;200;250m\e[48;2;171;0;0m"
+C_RED_INTER="\e[0;5;1;41m"
+C_BL="\e[0;38;2;100;200;250m"
+C_BL2="\e[1;38;2;100;200;250m"
+C_BL_LIGHT="\e[1;7;38;2;100;200;250m"
+
+ #+ SYSTEM
+ESC=$'\x1b'
+INTRO=""
+
+ #+ LOCATIONS
+BASE=$(dirname "$(readlink -f "$0")")
+RESOURCES=""$BASE"/resources"
+SCRIPTS=""$RESOURCES"/scripts"
+WORKDIR="/tmp/bkp_workdir"
+
+ #+ FILES
+LOCK=""$BASE"/backup.lock"
+BACKUP_CFG=""$RESOURCES"/backup.cfg"
+AUX_SCRIPT=""$WORKDIR"/aux_script"
+LOG_MODDER=""$WORKDIR"/log_modder"
+ERRORS_MODDER=""$WORKDIR"/errors_modder"
+REMOTE_SCRIPT=""$WORKDIR"/remote_script"
+
+NO_NEED_CONFIRM=""$WORKDIR"/no_need_confirm"
+OK_RSYNC=""$WORKDIR"/ok_rsync"
+
+RSYNC_OUTPUT=""$WORKDIR"/rsync_output"
+RS_ERR_OUTPUT=""$WORKDIR"/rs_err_output"
+
+PRELOG2=""$WORKDIR"/prelog2"
+LOG="$HOME/backup_logs/$(date --iso-8601)/`date --iso-8601`.log"
+ERRORS_LOG="$HOME/backup_logs/$(date --iso-8601)/ERRORS_`date --iso-8601`.log"
+
+if [ -f "$LOCK" ]
+then tput reset
+     setterm -cursor off
+     echo -en "\n \e[1m'backup' is already running !!\e[0m\n
+               \r If you are sure that there isn't running other
+               \r instance of 'backup', delete '\e[4mbackup.lock\e[0m' file
+               \r from the same directory where is located the main script.
+               \r (Probably in /usr/local/bin/BACKUP.d/)
+               \r _________________________________________________________\n\n\n"
+     read -p " Press any key to exit"
+     echo -e "\n\n"
+     setterm -cursor on
+     exit
+else touch "$LOCK"
+fi
+
+ #+ CKECK IF SCRIPT IS IN PATH DIRECTORY.
+ #+ ('SUDO' NEEDED TO MODIFY 'backup.cfg' FILE)
+PATHLIST=$(echo $PATH | tr ":" "\n")
+for path in $PATHLIST
+do  if [ $path = $BASE ]
+    then SUDO="sudo"; break
+    else SUDO=""
+    fi
+done
+unset PATHLIST
+
+ #+ $LOG / $ERRORS_LOG SHA512SUM
+SHA_LOG=$(sha512sum $LOG 2>/dev/null)
+SHA_ERRORS_LOG=$(sha512sum $ERRORS_LOG 2>/dev/null)
+
+ #+ LAST $LOG FILE LINE
+if [ -f $LOG ]
+then LAST_LOG_LINE=$(grep -n "BACKUP FINISHED" $LOG | tail -1 | cut -d: -f1)
+else LAST_LOG_LINE=0
+fi
+
+ #+ LAST $ERRORS_LOG FILE LINE
+if [ -f $ERRORS_LOG ]
+then LAST_ERR_LOG_LINE=$(grep -n "FINISHED" $ERRORS_LOG | tail -1 | cut -d: -f1)
+else LAST_ERR_LOG_LINE=0
+fi
+
+ #+ DEBIAN? / ARCH?
+if [ $(which apt-get 2>/dev/null) ]
+then	DISTRO="debian"
+        PKGMGR='sudo apt -y install'
+elif [ $(which pacman 2>/dev/null) ]
+then	DISTRO="arch"
+        PKGMGR='sudo pacman --color=always --noconfirm -S'
+fi
+
+### END OF VARIABLES SETTING ####
+#################################
+
+exec 3<&0  # ALLOWS "READ" COMMAND INTO "WHILE" BUCLE.
+trap 'INT_HANDLER' INT
+
+# NO ROOT ALLOWED
+if [ $UID = 0 ]
+then tput reset
+     TITLE  # FUNCTION CALL
+     setterm -cursor off
+     echo -e "\n   "$C_REDLIGHT" Don't run as root "$C_0"\n\n"
+     sleep 2
+     setterm -cursor on
+     rm "$LOCK"
+     exit 2
+fi
+
+# CREATE "$WORKDIR" DIRECTORY OR DELETE ITS CONTENT IF ALREADY EXISTS.
+if [ -d $WORKDIR ]
+then rm -fr $WORKDIR/*
+else mkdir $WORKDIR
+fi
+
+# COPY 'log_modder' SCRIPT TO $WORKDIR DIRECTORY.
+cp -fr $SCRIPTS/log_modder $WORKDIR/log_modder.original
+
+# CREATE LOGS DIRECTORY IF NOT EXISTS.
+if [ ! -d $HOME/backup_logs/$(date --iso-8601) ]
+then mkdir -p $HOME/backup_logs/$(date --iso-8601)
+fi
+
+# ADDS "#eof" TO 'backup.cfg' FILE.
+     # EXISTS OR IT'S EMPTY?
+if [ ! -f "$BACKUP_CFG" ] ||
+   [ $(wc -c "$BACKUP_CFG" | awk '{print $1}')  = 0 ]
+
+then #+ MAKES 'backup.cfg' FILE.
+     $SUDO touch "$BACKUP_CFG"
+     $SUDO chmod 777 "$BACKUP_CFG"
+
+     #+ ADD TEXT TO 'backup.cfg' FILE. USE 'cat' COMMAND INSTEAD 'sed' COMMAND
+     #+ BECAUSE IF FILE IT'S EMPTY IN PATH DIRECTORY 'sed' COMMAND RETURNS ERROR.
+     echo -e "### PRESET BACKUPS ###\n#eof" > "$WORKDIR"/a
+     cat "$WORKDIR"/a > "$BACKUP_CFG"
+     rm "$WORKDIR"/a
+
+else #+ DELETE EMPTY LINES.
+     if [ $(grep -E -c "^$" "$BACKUP_CFG") != 0 ]
+     then $SUDO sed -i '/^$/d' "$BACKUP_CFG"
+     fi
+
+     #+ CHECK THAT THE LAST LINE = "#eof"
+     if [[ $(tail -1 "$BACKUP_CFG") != "#eof" ]]
+     then $SUDO sed -i '$a #eof' "$BACKUP_CFG"
+     fi
+fi
+
+# CALLING FUNCTIONS.
+DEPENDENCES  # FUNCTION CALL
+
+##############################################################################
+# CHECK FOR PARAMETERS IN SCRIPT EXECUTION.
+# IF THERE ARE 2 PARAMETERS (SOURCE/DESTINATION), 'backup.cfg' WON'T BE READED.
+# SOURCE/DESTINATION PARAMETERS WON'T BE PRESERVED FOR FUTURE BACKUPS.
+# IF THERE AREN'T SOURCE/DETINATION PARAMETERS 'backup.cfg' FILE WILL BE READED,
+# SEARCHING FOR LOCAL AND REMOTE DIRECTORIES (IN THAT ORDER).
+if [ "$1" == "--help" -o "$1" == "-h" ]
+then HELP  # FUNCTION CALL
+
+elif [ $# = 2 ]
+then SRC=$1
+     DEST=$2
+     PARAM_CHECK
+
+elif [ "$#" = 3 ] && [ "$1" = "--content" -o "$1" = "-c" ]
+then SRC=$2/
+     DEST=$3
+     PARAM_CHECK
+
+elif [ $# != 0 ]
+then setterm -cursor off
+      echo -e "\n"  $C_REDLIGHT"INCORRECT PARAMETERS"$C_0"\n\n"
+      sleep 2
+      HELP  # FUNCTION CALL
+
+
+else ## THERE AREN'T PARAMETERS
+     TITLE          # FUNCTION CALL
+     LOCAL_SEARCH   # FUNCTION CALL
+     REMOTE_SEARCH  # FUNCTION CALL
+     F_SIMULATION   # FUNCTION CALL
+
+     ## DETERMINES SOURCE AND DESTIONATION TO BACKKUP
+     #+ READING 'sources_list' AND 'destinations_list' TEXT FILES.
+     ## PROCESS ALL SOURCE/DESTINATIONS AND CREATE 'aux_script' IF NECESSARY.
+     if [[ $(ls "$WORKDIR") == *"_list" ]]
+     then N=1
+          while [[ $N -le  $(wc -l ""$WORKDIR"/sources_list" | awk '{print $1}') ]]
+          do SRC=$(awk "NR == $N"  ""$WORKDIR"/sources_list")
+             DEST=$(awk "NR == $N"  ""$WORKDIR"/destinations_list")
+             NUM_L=$(awk "NR == $N"  ""$WORKDIR"/lines_number_list")
+
+             SRC_DEST_TYPE  # FUNCTION CALL
+             ENCODE         # FUNCTION CALL
+             DECODE         # FUNCTION CALL
+             MK_AUX_SCRIPT  # FUNCTION CALL
+             let N+=1
+          done
+     fi
+fi
+##############################################################################
+
+# ASK: WOULD YOU LIKE TO ADD NEW SOURCE/DESTINATION DIRECTORIES TO BACKUP?.
+ADD_DIRS  # FUNCTION CALL
+
+# EXECUTE 'aux_script' IF IT EXISTS.
+if [ -f $AUX_SCRIPT ]
+then bash $AUX_SCRIPT
+fi
+
+# EXECUTE 'OK_RSYNC'
+# (IT WAS CREATED IN NO-SIMULATION MODE
+# AND IN SIMULATION MODE IF CHANGES WAS ACCEPTED BY USER).
+if [ -f "$OK_RSYNC" ]
+then tput reset
+     # 'log_modder' SCRIPT WILL CHECK IF EXISTS 'no_simulation' FILE.
+     touch "$WORKDIR"/no_simulation
+     echo -e "\n "$C_BL_LIGHT"Starting backup"$C_0""
+     sleep 2
+
+     # READING 'ok_rsync' FILE LINE BY LINE.
+     echo "#eof" >> "$OK_RSYNC"
+     LINE=a
+     while [ "$LINE" != "#eof" ]
+     do read LINE
+
+        # 'log_modder' SCRIPT NEEDS TO KNOW SOURCE AND DESTINATION.
+        # IT SEARCH FOR SOURCE AND DESTINATION IN EACH LINE OF 'ok_rsync' FILE.
+        # (SOURCE AND DESTINATION ARE IN THE SAME LINE THAT '$RSYNC_OUTPUT' EXPRESSION).
+        SRC_DEST=$(echo $LINE | grep -o "$RSYNC_OUTPUT")
+        if [[ ! -z "$SRC_DEST" ]]
+        then SRC=$(echo $LINE | cut -d"'" -f2)
+             DEST=$(echo $LINE | cut -d"'" -f4)
+
+             SRC_DEST_TYPE  # FUNCTION CALL
+             tput reset
+             echo -e "$SHOW_SRC"
+             echo -e "$SHOW_DEST\n\n"
+
+             # RUN RSYNC
+             echo "rsync -zzavhi --log-format=\"[%t] %i %n %L\" $LINE"\
+                   > "$WORKDIR"/aux
+             bash "$WORKDIR"/aux
+
+             # MODIFY RSYNC OUTPUT, SHOW IT IN STDIN AND CREATES LOG.
+             cp -fr $WORKDIR/log_modder.original $LOG_MODDER
+             echo "SRC='$SRC'"                >> $LOG_MODDER
+             echo "DEST='$DEST'"              >> $LOG_MODDER
+             echo "SRC_TYPE=\"$SRC_TYPE\""    >> $LOG_MODDER
+             echo "DEST_TYPE=\"$DEST_TYPE\""  >> $LOG_MODDER
+             echo "C_SRC=\"$C_SRC\""          >> $LOG_MODDER
+             echo "C_DEST=\"$C_DEST\""        >> $LOG_MODDER
+             echo "FUNCTION $RSYNC_OUTPUT"    >> $LOG_MODDER
+             bash $LOG_MODDER
+
+             ###################################################################
+             ### SEARCH FOR ERRORS #############################################
+             #+  RSYNC IN SIMULATION MODE -> OUTPUT=ERRORS -> 'rs_err_output'.
+
+             if [ ! -f $NO_NEED_CONFIRM ]
+             then echo -en "\n"$C_GR"  Searchig for errors. Wait..."
+                  sleep 2
+                  rsync -zzavhin $DEL --log-format="[%t] %i %n %L" "$SRC" "$DEST"\
+                       > $RS_ERR_OUTPUT
+
+                  #+ 'errors_modder' SCRIPT PROCESS 'rs_err_output' FILE (ERRORS).
+                  cp -fr $SCRIPTS/errors_modder $WORKDIR
+                  echo "SRC='$SRC'"                >> $ERRORS_MODDER
+                  echo "DEST='$DEST'"              >> $ERRORS_MODDER
+                  echo "SRC_TYPE=\"$SRC_TYPE\""    >> $ERRORS_MODDER
+                  echo "DEST_TYPE=\"$DEST_TYPE\""  >> $ERRORS_MODDER
+                  echo "C_SRC=\"$C_SRC\""          >> $ERRORS_MODDER
+                  echo "C_DEST=\"$C_DEST\""        >> $ERRORS_MODDER
+                  echo "FUNCTION $RS_ERR_OUTPUT"   >> $ERRORS_MODDER
+                  bash $ERRORS_MODDER
+
+             ### END OF ERRORS SEARCH ##########################################
+             ###################################################################
+
+                 setterm -cursor off
+                 if [ -f "$WORKDIR"/err_local ]
+                 then rm "$WORKDIR"/err_local
+                      echo -e "\n  "$C_RED_INTER"FINISHED WITH ERRORS"$C_0""
+                      sleep 10
+                 else tput el1
+                      echo -en "\r  "$C_GR_LIGHT"FINISHED"$C_0""
+                      sleep 2
+                 fi
+                 setterm -cursor on
+             fi
+
+             rm $RSYNC_OUTPUT\
+                $LOG_MODDER\
+                $NO_NEED_CONFIRM\
+                $RS_ERR_OUTPUT 2>/dev/null
+        fi
+     done < "$OK_RSYNC"
+fi
+
+# ADD RESULT TO LOG FILE.
+if [ -f "$PRELOG2" ]; then cat "$PRELOG2" >> "$LOG"; fi
+
+THE_END # FUNCTION CALL

@@ -1,0 +1,177 @@
+#! /bin/bash
+#_________________________________________________________________
+
+### THIS SCRIPT MODIFIES THE RSYNC OUTPUT AND CREATES SUMMMARY ###
+##################################################################
+
+function FUNCTION()
+{
+ # VARIABLES TO SHOW SOURCE AND DESTINATION IN STDOUT.
+ SHOW_SRC="\n  "$C_BL2"["$C_SRC""$SRC_TYPE""$C_BL2"] "$C_BL"SRC : "$C_0"'"$SRC"'"
+ SHOW_DEST="  "$C_BL2"["$C_DEST""$DEST_TYPE""$C_BL2"] "$C_BL"DEST: "$C_0"'"$DEST"'"
+
+ # DELETE BLANK SPACES AT THE END OF EACH FILE IN 'rsync_output' FILE.
+ sed -i "s/ $//g" $1 2>/dev/null
+
+ # MODIFIES DATE OF RSYNC OUTPUT IN 'rsync_output' FILE.
+ DATA=$(grep -E "^\[....\/..\/.. " -m1 -o $1)
+ sed -i "s#\\$DATA#\[#g" $1 2>/dev/null
+
+ # MODIFIES ICONIZED OUTPUT OF RSYNC IN 'rsync_output' FILE.
+ sed -i "/\/$/ s/\*deleting../\[del_d\] >  /g" $1
+ sed -i "/^\[..:..:..\] \*deleting.../ s/\*deleting../\[del_f\] >  /g" $1
+ sed -i "/^\[..:..:..\] cd+++++++++/ s/cd+++++++++/\[new_d\] >  /g" $1
+ sed -i "/^\[..:..:..\] >f+++++++++/ s/>f+++++++++/\[new_f\] >  /g" $1
+ sed -i "/^\[..:..:..\] <f+++++++++/ s/<f+++++++++/\[new_f\] >  /g" $1
+ sed -i "/^\[..:..:..\] >f\./ s/>f\........./\[mod_f\] >  /g" $1
+ sed -i "/^\[..:..:..\] <f\./ s/<f\........./\[mod_f\] >  /g" $1
+ sed -i "/^\[..:..:..\] cL+++++++++/ s/cL+++++++++/\[new_l\] >  /g" $1
+
+ if [[ -z $(grep "\[..:..:..\] \[" "$1") ]]
+ then touch "$NO_NEED_CONFIRM"  # IT WILL BE CHECKED IN 'aux_script'
+                                #+ AND IN MAIN SCRIPT WHEN SEARCH FOR ERRORS.
+      tput reset
+      echo -e "$SHOW_SRC"
+      echo -e "$SHOW_DEST"
+      echo -e "\n\n  "$C_GR_BOLD"THERE AREN'T CHANGES"$C_0""
+
+ else  NEED_CONFIRM=Y
+      # COUNT THE NUMBER OF CHANGES GROUPED BY CATEGORIES.
+      ND="$(grep -c "] \[new_d\] >  " "$1")"  # NEW DIRS
+      DD="$(grep -c "] \[del_d\] >  " "$1")"  # DELETED DIRS
+      NF="$(grep -c "] \[new_f\] >  " "$1")"  # NEW FILES
+      DF="$(grep -c "] \[del_f\] >  " "$1")"  # DELETED FILES
+      MF="$(grep -c "] \[mod_f\] >  " "$1")"  # MODIFIED FILES
+      NL="$(grep -c "] \[new_l\] >  " "$1")"  # NEW LINKS
+
+      # ARRAY WITH THE NUMBER OF CHANGES GROUPED BY CATEGORIES.
+      QUANTITY=($ND $DD $NF $DF $MF $NL)
+
+      # ARRAY WITH CHANGE'S CATEGORIES.
+      CATEGORIES=('] \[new_d] >'
+                  '] \[del_d] >'
+                  '] \[new_f] >'
+                  '] \[del_f] >'
+                  '] \[mod_f] >'
+                  '] \[new_l] >')
+
+      # ARRAY WITH CHANGE'S CATEGORIES TO SHOW IN STDOUT AND IN LOG FILE.
+      TITLES=('DIRECTORIES CREATED'
+              'DIRECTORIES DELETED'
+              'FILES CREATED'
+              'FILES DELETED'
+              'FILES MODIFIED'
+              'LINKS CREATED')
+
+      # ARRAY WITH CHANGE'S CATEGORIES TO CREATE CHANGE'S SUMMARY.
+      LOG_SUMMARY=('Directories Created'
+                   'Directories Deleted'
+                   'Files Created'
+                   'Files Deleted'
+                   'Files Modified'
+                   'Links Created')
+
+      # CLEAR SCREEN.
+      # SHOW SOURCE/DESTINATION AGAIN.
+      tput reset
+      echo -e "$SHOW_SRC"
+      echo -e "$SHOW_DEST"
+      echo -e "\n\n  "$C_GR_BOLD"__________________________"
+      if [ -f "$WORKDIR"/no_simulation ]
+      then echo -e "\n  CHANGES SUMMARY:"$C_0""
+      else echo -e "\n  SIMULATION MODE SUMMARY:"$C_0""
+      fi
+
+      # 'prelog' FILE'S HEADER.
+      echo -e "\n\n\n\t#######################################################"\
+               >> "$PRELOG"
+      echo -e "\t#######################################################"\
+               >> "$PRELOG"
+      echo -e "\t\t$(date "+%d/%m/%Y : %H:%M:%S")" >> "$PRELOG"
+      echo -e "\t\t["$SRC_TYPE"] SRC --> $SRC" >> "$PRELOG"
+      echo -e "\t\t["$DEST_TYPE"] DEST ---> $DEST" >> "$PRELOG"
+
+      # SHOW CHANGES IN STDOUT AND ADD THEM TO 'prelog' FILE.
+      # CREATES 'summary' FILE.
+      INDEX=0
+      for i in ${QUANTITY[@]}
+      do if [[ $i != 0 ]]
+         then echo -e "\n  "$C_GR_LIGHT"***** ${TITLES[$INDEX]} ********"$C_GR""
+              echo "${LOG_SUMMARY[$INDEX]}:${QUANTITY[$INDEX]}" >> "$SUMMARY"
+              echo -e "\n ***** ${TITLES[$INDEX]} ********" >> "$PRELOG"
+              grep "${CATEGORIES[$INDEX]}" "$1" | tee -a "$PRELOG"
+         fi
+         let INDEX+=1
+      done
+ fi
+
+ # SHOW SEPARATOR AFTER THE MODIFIED RSYNC OUTPUT.
+ echo -e "  "$C_GR_BOLD"__________________________"$C_0"\n"
+ if [ -f "$NO_NEED_CONFIRM" ]; then sleep 3; fi
+
+# MODIFIES 'summary' FILE TO SHOW IT IN COLUMNS.
+ if [ -f "$SUMMARY" ]
+ then mv $SUMMARY $SUMMARY2
+      sed -i '1i CHANGES:QUANTITY' $SUMMARY2
+      column -t -s: $SUMMARY2 > $SUMMARY
+
+      sed -i "s/^/  /g" "$SUMMARY"
+      cat "$SUMMARY"
+
+      # ADDS '#eof' TO 'summary' FILE.
+      if [[ $(tail -1 "$SUMMARY") != "#eof" ]]
+      then echo -e "#eof" >> "$SUMMARY"
+      fi
+
+      # READS 'summary' FILE AND INSERT IT IN 'prelog' FILE.
+      NUM_LINE=$(grep -n "##################" "$PRELOG" | tail -1 | cut -d: -f1)
+      let NUM_LINE+=4
+      LINE="a"
+      while [ ! -z "$LINE" ]
+      do read LINE
+         if [ "$LINE" != "#eof" ]
+         then sed -i ""$NUM_LINE"a\ \t\t$LINE" "$PRELOG"
+              let NUM_LINE+=1
+         fi
+      done < "$SUMMARY"
+
+      sed -i ""$NUM_LINE"a\ " "$PRELOG"
+      cat $PRELOG >> $PRELOG2
+      rm $SUMMARY $PRELOG
+ fi
+
+ # SHOW SOURCE / DESTINATION IN STDOUT AFTER SUMMARY.
+ if [ ! -f "$NO_NEED_CONFIRM" ]
+ then echo -e "\n$SHOW_SRC"
+      echo -e "$SHOW_DEST"
+ fi
+ sleep 0.2
+}
+
+#################################################
+######  S T A R T   E X E C U T I N G ###########
+#################################################
+C_0="\e[0m"
+C_RED="\e[0;1;31m"
+C_GR="\e[0;3;38;2;0;251;102m"
+C_GR_BOLD="\e[0;1;32m"
+C_GR_LIGHT="\e[1;38;2;0;0;0m\e[48;2;0;255;0m"
+C_BL="\e[0;38;2;100;200;250m"
+C_BL2="\e[1;38;2;100;200;250m"
+
+WORKDIR="/tmp/bkp_workdir"
+NO_NEED_CONFIRM=""$WORKDIR"/no_need_confirm"
+SUMMARY=""$WORKDIR"/summary"
+SUMMARY2=""$WORKDIR"/summary2"
+PRELOG=""$WORKDIR"/prelog"
+PRELOG2=""$WORKDIR"/prelog2"
+
+ #+ DEBIAN? / ARCH?
+if [ $(which apt-get 2>/dev/null) ]
+then	DISTRO="debian"
+elif [ $(which pacman 2>/dev/null) ]
+then	DISTRO="arch"
+fi
+
+#####################################################################
+#####################################################################

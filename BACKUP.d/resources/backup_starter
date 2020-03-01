@@ -1,0 +1,63 @@
+#! /bin/bash
+#################################################
+
+# VARIABLES.
+BASE=$(dirname "$(readlink -f "$0")")
+C_0="\e[0m"
+C_BLUE="\e[1;44m"
+
+if [ -f ""$BASE"/backup.lock" ]
+then tput reset
+     setterm -cursor off
+     echo -en "\n \e[1m'backup' is already running !!\e[0m\n
+               \r If you are sure that there isn't running other
+               \r instance of 'backup', delete '\e[4mbackup.lock\e[0m' file
+               \r from the same directory where is located the main script.
+               \r (Probably in /usr/local/bin/BACKUP.d/)
+               \r _________________________________________________________\n\n\n"
+     read -n1 -p " Press any key to exit"
+     echo -e "\n\n"
+     setterm -cursor on
+     exit
+fi
+
+# DEBIAN? / ARCH?
+if [ $(which apt-get 2>/dev/null) ]
+then DISTRO=debian
+     PKGMGR='sudo apt-get -y install'
+elif [ $(which pacman 2>/dev/null) ]
+then DISTRO=arch
+     PKGMGR='sudo pacman -Sy --noconfirm'
+fi
+
+# CHECK FOR DEPENDENCES.
+# xfce4-terminal / screen / gedit / rsync
+DEPS=(xfce4-terminal screen gedit rsync)
+for dep in ${DEPS[@]}
+do if [ ! $(which $dep 2>/dev/null) ]
+   then tput reset
+        echo -e "\n  "$C_BLUE" InstalLing $dep "$C_0"\n\n"
+        sleep 2
+        $PKGMGR $dep
+        sleep 2
+        tput reset
+    fi
+done
+
+# EXECUTE 'backup' SCRIPT WITH OR WITHOUT PARAMETERS.
+if [ $# = 2 ]
+then screen -d -m xfce4-terminal\
+            --geometry 100x68\
+            --hide-menubar\
+            --icon=$BASE/resources/backup.png\
+            --title='BACKUP'\
+            --execute "$BASE"/backup "$1" "$2"
+
+else screen -d -m xfce4-terminal\
+            --geometry 100x68\
+            --hide-menubar\
+            --icon=$BASE/resources/backup.png\
+            --title='BACKUP'\
+            --execute "$BASE"/backup
+fi
+exit 0

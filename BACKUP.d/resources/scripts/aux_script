@@ -1,0 +1,113 @@
+#!/bin/bash
+#______________________________________________________________________________
+
+ ### IN SIMULATION MODE: 'aux_script' EXECUTES RSYNC AND
+  #+ ASKS USER TO CONFIRM OR DISCARD RESULTS. ###
+ ### IN NO-SIMULATION MODE: 'aux_script' GENERATES 'ok_rsync' FILE DIRECTLY ###
+###############################################################################
+
+function FUNCTION()
+{
+ # VARIABLES TO SHOW SOURCE AND DESTINATION IN STDOUT.
+ SHOW_SRC="\n  "$C_BL2"["$C_SRC""$SRC_TYPE""$C_BL2"] "$C_BL"SRC : "$C_0"'"$SRC"'"
+ SHOW_DEST="  "$C_BL2"["$C_DEST""$DEST_TYPE""$C_BL2"] "$C_BL"DEST: "$C_0"'"$DEST"'"
+
+ # DELETE OLD FILES.
+ if [ -f "$RSYNC_OUTPUT" ]; then rm -fr "$RSYNC_OUTPUT"; fi
+ if [ -f "$SUMMARY" ]; then rm -fr "$SUMMARY"; fi
+ tput reset
+
+ ## SIMULATION MODE.
+ if [ "$SIMULATION" = "Y" ]
+ then # SHOW SOURCE / DESTINATION.
+      echo -e "$SHOW_SRC"
+      echo -e "$SHOW_DEST\n\n"
+
+      echo ""$RS" '$SRC' '$DEST'" > "$WORKDIR"/aux
+      bash "$WORKDIR"/aux | tee -a $RSYNC_OUTPUT
+
+      # MODIFY RSYNC OUTPUT.
+      cp -fr $WORKDIR/log_modder.original $LOG_MODDER
+      echo "SRC='$SRC'"                       >> $LOG_MODDER
+      echo "DEST='$DEST'"                     >> $LOG_MODDER
+      echo "SRC_TYPE=\"$SRC_TYPE\""           >> $LOG_MODDER
+      echo "DEST_TYPE=\"$DEST_TYPE\""         >> $LOG_MODDER
+      echo "C_SRC=\"$C_SRC\""                 >> $LOG_MODDER
+      echo "C_DEST=\"$C_DEST\""               >> $LOG_MODDER
+      echo "FUNCTION \$WORKDIR/rsync_output"  >> $LOG_MODDER
+      bash $LOG_MODDER
+      rm $LOG_MODDER
+
+      # 'no_need_confirm' FILE WAS MAKED BY 'log_modder' SCRIPT.
+      # CALLS TO FUNCTION FOR CONFIRM OR DISCARD BACKUP CHANGES.
+      if [ ! -f "$NO_NEED_CONFIRM" ]
+      then ASK_CONFIRM  # FUNCTION CALL
+      fi
+
+      rm -fr "$RSYNC_OUTPUT"\
+              $PRELOG\
+              $PRELOG2\
+              $SUMMARY\
+              $WORKDIR/aux\
+              $NO_NEED_CONFIRM
+
+ ## NO-SIMULATION MODE.
+ elif [ "$SIMULATION" = "N" ]
+ then echo -e "$DEL '$SRC' '$DEST' | tee -a $RSYNC_OUTPUT" >> "$OK_RSYNC"
+ fi
+}
+
+#________________________________________________
+ASK_CONFIRM()
+{
+ tput sc
+ echo -e "\n\n  _______________________________________\n"
+ echo -e "  "$C_1"Press \"A\" to see summary in text editor."
+ echo -en "  Confirm Changes [y/N]:"$C_0" "
+ read -n1 CONFIRM
+     case $CONFIRM in
+         a|A) screen -d -m gedit $PRELOG2
+              tput rc; tput ed; ASK_CONFIRM  # FUNCTION CALL
+         ;;
+         y|Y) # CONFIRM CHANGES.
+              tput rc; tput ed
+              echo -e "\n\n  _______________________________________\n"
+              echo -e "  "$C_1"Press \"A\" to see summary in text editor."
+              echo -en "  Confirm Changes [y/N]:"$C_1" Y"; setterm -cursor off
+              echo -e "$DEL '$SRC' '$DEST' | tee -a $RSYNC_OUTPUT"\
+                   >> "$OK_RSYNC"
+         ;;
+         $INTRO|n|N)
+              # DISCARD CHANGES
+              tput rc; tput ed
+              echo -e "\n\n  _______________________________________\n"
+              echo -e "  "$C_1"Press \"A\" to see summary in text editor."
+              echo -en "  Confirm Changes [y/N]:"$C_1" N"; setterm -cursor off
+              echo -e "\n\n  "$C_GR_LIGHT"WON'T MAKE CHANGES"$C_0"\n"
+         ;;
+         *) tput rc; tput ed; ASK_CONFIRM  # FUNCTION CALL
+     esac
+ sleep 1.5
+}
+
+#################################################
+###### S T A R T   E X E C U T I N G ############
+#################################################
+C_0="\e[0m"
+C_1="\e[0;1m"
+C_GR_LIGHT="\e[0;1;38;2;0;0;0m\e[48;2;0;255;0m"
+C_RED="\e[0;1;31m"
+C_BL="\e[0;38;2;100;200;250m"
+C_BL2="\e[1;38;2;100;200;250m"
+
+INTRO=""
+WORKDIR="/tmp/bkp_workdir"
+LOG_MODDER=""$WORKDIR"/log_modder"
+RSYNC_OUTPUT=""$WORKDIR"/rsync_output"
+NO_NEED_CONFIRM=""$WORKDIR"/no_need_confirm"
+OK_RSYNC=""$WORKDIR"/ok_rsync"
+SUMMARY=""$WORKDIR"/summary"
+PRELOG=""$WORKDIR"/prelog"
+PRELOG2=""$WORKDIR"/prelog2"
+#####################################################################
+#####################################################################

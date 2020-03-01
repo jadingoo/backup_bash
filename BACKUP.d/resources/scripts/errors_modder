@@ -1,0 +1,151 @@
+#! /bin/bash
+#________________________________________________________________________
+
+### THIS SCRIPT MODIFIES THE RSYNC OUTPUT AND CREATES ERRORS SUMMMARY ###
+#########################################################################
+
+function FUNCTION()
+{
+ # VARIABLES TO SHOW SOURCE AND DESTINATION IN STDOUT.
+ SHOW_SRC="\n  "$C_BL2"["$C_SRC""$SRC_TYPE""$C_BL2"] "$C_BL"SRC : "$C_0"'"$SRC"'"
+ SHOW_DEST="  "$C_BL2"["$C_DEST""$DEST_TYPE""$C_BL2"] "$C_BL"DEST: "$C_0"'"$DEST"'"
+
+ # DELETE BLANK SPACES AT THE END OF EACH FILE IN 'rs_err_output' FILE.
+ sed -i "s/ $//g" $1 2>/dev/null
+
+ # MODIFIES DATE OF RSYNC OUTPUT IN 'rs_err_output' FILE.
+ DATA=$(grep -E "^\[....\/..\/.. " -m1 -o $1)
+ sed -i "s#\\$DATA#\[#g" $1 2>/dev/null
+
+ # MODIFIES ICONIZED OUTPUT OF RSYNC IN 'rs_err_output' FILE.
+ sed -i "/\/$/ s/\*deleting../\[del_d\] >  /g" $1
+ sed -i "/^\[..:..:..\] \*deleting.../ s/\*deleting../\[ERROR del_f\] >  /g" $1
+ sed -i "/^\[..:..:..\] cd+++++++++/ s/cd+++++++++/\[ERROR new_d\] >  /g" $1
+ sed -i "/^\[..:..:..\] >f+++++++++/ s/>f+++++++++/\[ERROR new_f\] >  /g" $1
+ sed -i "/^\[..:..:..\] >f\./ s/>f\........./\[ERROR mod_f\] >  /g" $1
+ sed -i "/^\[..:..:..\] cL+++++++++/ s/cL+++++++++/\[ERROR new_l\] >  /g" $1
+
+ # CHECK FOR MATCHES = ERRORS.
+ if [[ ! -z $(grep "\[..:..:..\] \[" "$1") ]]
+ then tput cuu1; tput cuu1; tput cuu1; tput cuu1; tput ed
+      echo -e "\n  "$C_RED_INTER"ERROR"$C_0": Some files weren't copied"
+      sleep 3
+      #++ INDICATORS FILES (WILL CHECKED IN 'THE_END' FUNCTION IN 'backup' SCRIPT).
+      touch "$WORKDIR"/err_global "$WORKDIR"/err_local
+ else exit
+ fi
+
+ # COUNTS THE NUMBER OF ERRORS AND GROUP THEM BY CATEEGORIES.
+ ND="$(grep -c "] \[ERROR new_d\] >  " "$1")"  # NEW DIRS
+ DD="$(grep -c "] \[ERROR del_d\] >  " "$1")"  # DELETED DIRS
+ NF="$(grep -c "] \[ERROR new_f\] >  " "$1")"  # NEW FILES
+ DF="$(grep -c "] \[ERROR del_f\] >  " "$1")"  # DELETED FILES
+ MF="$(grep -c "] \[ERROR mod_f\] >  " "$1")"  # MODIFIED FILES
+ NL="$(grep -c "] \[ERROR new_l\] >  " "$1")"  # NEW LINKS
+
+ # ARRAY WITH THE NUMBER OF ERRORS GROUPED BY CATEGORIES.
+ QUANTITY=($ND $DD $NF $DF $MF $NL)
+
+ # ARRAY WITH ERROR'S CATEGORIES.
+ CATEGORIES=('] \[ERROR new_d] >'
+             '] \[ERROR del_d] >'
+             '] \[ERROR new_f] >'
+             '] \[ERROR del_f] >'
+             '] \[ERROR mod_f] >'
+             '] \[ERROR new_l] >')
+
+ # ARRAY WITH ERROR'S CATEGORIES TO SHOW IN STDOUT AND IN ERROR'S LOG FILE.
+ TITLES=('DIRECTORIES NOT CREATED'
+         'DIRECTORIES NOT DELETED'
+         'FILES NOT CREATED'
+         'FILES NOT DELETED'
+         'FILES NOT MODIFIED'
+         'LINKS NOT CREATED')
+
+ # ARRAY WITH ERROR'S CATEGORIES TO CREATE ERROR'S SUMMARY.
+ LOG_SUMMARY=('Directories not Created'
+              'Directories not Deleted'
+              'Files not Created'
+              'Files not Deleted'
+              'Files not Modified'
+              'Links not Created')
+
+ # ERROR LOG'S HEADER.
+ echo -e "\n\n\t#######################################################"\
+          >> "$ERRORS_LOG"
+ echo -e "\t#######################################################"\
+          >> "$ERRORS_LOG"
+ echo -e "\t\t$(date "+%d/%m/%Y : %H:%M:%S")" >> "$ERRORS_LOG"
+ echo -e "\t\t["$SRC_TYPE"] SRC --> $SRC"       >> "$ERRORS_LOG"
+ echo -e "\t\t["$DEST_TYPE"] DEST ---> $DEST"   >> "$ERRORS_LOG"
+
+ # SHOW ERRORS IN STDOUT AND ADD THEM DO ERROR'S LOG AND 'err_list' FILES.
+ # CREATES 'err_summary' FILE.
+ INDEX=0
+ for i in ${QUANTITY[@]}
+ do if [[ $i != 0 ]]
+    then echo -e "\n  "$C_REDLIGHT"***** ${TITLES[$INDEX]} ********"$C_RED" "
+         echo "${LOG_SUMMARY[$INDEX]}:${QUANTITY[$INDEX]}" >> "$ERR_SUMMARY"
+         echo -e "\n ***** ${TITLES[$INDEX]} ********" >> "$ERRORS_LOG"
+         grep "${CATEGORIES[$INDEX]}" "$1" | tee -a "$ERRORS_LOG" | tee -a $ERR_LIST
+    fi
+    let INDEX+=1
+ done
+ echo -e ""$C_0"\n"
+ echo -e "\n" >> "$ERRORS_LOG"
+
+ # READ ERROR'S LIST FROM 'err_list' AND DELETE THEM FROM 'prelog2' FILE.
+ sed -i "s;\[;\\\[;g" $ERR_LIST
+ line=a
+ while [[ -n $line ]]
+ do read line
+    if [[ -n $line ]]
+    then LINE=$(echo $line | cut -d">" -f2-)
+         sed -i "s;$LINE;RSYNC ERROR:  DELETED ENTRY (SEE ERRORS LOG);g" $PRELOG2
+    fi
+ done < $ERR_LIST
+
+ # MODIFIES 'err_summary' TO SHOW IT IN COLUMNS.
+ if [ -f "$ERR_SUMMARY" ]
+ then mv "$ERR_SUMMARY" "$ERR_SUMMARY2"
+      sed -i '1i ERRORS:QUANTITY' "$ERR_SUMMARY2"
+      column -t -s: "$ERR_SUMMARY2" > "$ERR_SUMMARY"
+
+      sed -i "s/^/  /g" "$ERR_SUMMARY"
+      echo -en "$C_SUMMARY"
+      cat "$ERR_SUMMARY" | tee -a $ERRORS_LOG
+      echo -en "$C_0"
+      rm $ERR_SUMMARY $ERR_LIST
+ fi
+
+ # SHOW SOURCE / DESTINATION IN STDOUT AFTER ERROR'S SUMMARY.
+ echo -e "\n$SHOW_SRC"
+ echo -e "$SHOW_DEST"
+}
+
+#################################################
+######  S T A R T   E X E C U T I N G ###########
+#################################################
+C_0="\e[0m"
+C_RED="\e[0;1;31m"
+C_REDLIGHT="\e[0;1;38;2;100;200;250m\e[0;48;2;171;0;0m"
+C_RED_INTER="\e[0;5;1;41m"
+C_BL="\e[0;38;2;100;200;250m"
+C_BL2="\e[1;38;2;100;200;250m"
+C_SUMMARY="\e[0;38;2;255;75;0m"
+
+WORKDIR="/tmp/bkp_workdir"
+PRELOG2=""$WORKDIR"/prelog2"
+ERR_SUMMARY=""$WORKDIR"/err_summary"
+ERR_SUMMARY2=""$WORKDIR"/err_summary2"
+ERR_LIST=""$WORKDIR"/err_list"
+ERRORS_LOG="$HOME/backup_logs/$(date --iso-8601)/ERRORS_`date --iso-8601`.log"
+
+ #+ DEBIAN? / ARCH?
+if [ $(which apt-get 2>/dev/null) ]
+then	DISTRO="debian"
+elif [ $(which pacman 2>/dev/null) ]
+then	DISTRO="arch"
+fi
+#####################################################################
+#####################################################################

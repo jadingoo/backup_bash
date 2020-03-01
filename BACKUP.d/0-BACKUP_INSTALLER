@@ -1,0 +1,179 @@
+#!/bin/bash
+######################################################################
+
+# CHECK FOR FILES IN DESTINATION.
+# COPY FROM SOURCE IF DOESN'T EXIST OR IF IT IS DIFFERENT.
+function main() {
+if [ -e "$B" ]
+then MD5_A=$(md5sum "$A" | cut -d' ' -f1)
+     MD5_B=$(md5sum "$B" | cut -d' ' -f1)
+     if [ "$MD5_A" != "$MD5_B" ]
+     then sudo cp -fr "$A" "$B"
+          sudo chmod -R 777 "$B"
+          echo " >> [file]  "$B""
+     fi
+else sudo cp -fr "$A" "$B"
+     sudo chmod -R 777 "$B"
+     echo " >  [file]  "$B""
+fi
+unset A B MD5_A MD5_B
+}
+######################################################################
+##########################  STARTING EXECUTION  ######################
+######################################################################
+
+# COLOR VARIABLES.
+C_0="\e[0m"
+C_BLUE="\e[1;44m"
+C_RED="\e[1;41m"
+######################################################################
+
+tput reset
+# NO ROOT ALLOWED.
+if [ $UID = 0 ]
+then tput reset
+     echo -e "\n  "$C_RED" Don't run as root "$C_0"\n\n"
+exit
+fi
+######################################################################
+
+# DEBIAN? / ARCH ?
+if [ $(which apt-get 2>/dev/null) ]
+then DISTRO=debian
+     PKGMGR='sudo apt-get -y install'
+elif [ $(which pacman 2>/dev/null) ]
+then DISTRO=arch
+     PKGMGR='sudo pacman -Sy --noconfirm'
+fi
+######################################################################
+
+# CHECK FOR DEPENDENCES.
+# xfce4-terminal / screen / gedit / rsync
+
+DEPS=(xfce4-terminal screen gedit rsync)
+
+for dep in ${DEPS[@]}
+do if [ ! $(which $dep 2>/dev/null) ]
+   then tput reset
+        echo -e "\n  "$C_BLUE" InstalLing $dep "$C_0"\n\n"
+        sleep 2
+        $PKGMGR $dep
+        sleep 2
+        tput reset
+    fi
+done
+
+######################################################################
+
+# MAKE NEEDED DIRECTORIES IF IT DOESN'T EXIST.
+DIRS=("/usr/local/man/man1"
+      "/usr/local/bin/BACKUP.d"
+      "/usr/local/bin/BACKUP.d/resources"
+      "/usr/local/bin/BACKUP.d/resources/scripts"
+      "$HOME/.misScripts"
+      "$HOME/.misScripts/accessos_directes"
+      "$HOME/.misScripts/icones")
+
+for i in ${DIRS[@]}
+do if [ ! -d  "$i" ]
+   then sudo mkdir -p "$i"
+        if [ $? = 0 ]
+        then echo " >   [dir]  $i"
+             sudo chmod -R 777 "$i"
+        fi
+   fi
+done
+######################################################################
+
+BASE=$(dirname "$(readlink -f "$0")")
+echo""
+
+######################################################################
+
+# A = SOURCE
+# B = DESTÍNATION
+
+# backup man_page to /usr/local/man/man1
+A=""$BASE"/resources/backup.1.gz"
+B="/usr/local/man/man1/backup.1.gz"
+main
+
+# main script
+A=""$BASE"/backup"
+B="/usr/local/bin/BACKUP.d/backup"
+main
+
+# Starter script
+A=""$BASE"/resources/backup_starter"
+B="/usr/local/bin/BACKUP.d/backup_starter"
+main
+
+# Icon to /usr/local/bin/BACKUP.d/resources
+A=""$BASE"/resources/backup.png"
+B="/usr/local/bin/BACKUP.d/resources/backup.png"
+main
+
+# backup.cfg to /usr/local/bin/BACKUP.d/resources
+A=""$BASE"/resources/backup.cfg"
+B="/usr/local/bin/BACKUP.d/resources/backup.cfg"
+main
+
+# different scripts to /usr/local/bin/BACKUP.d/resources/scripts
+for A in ""$BASE"/resources/scripts/aux_script"\
+         ""$BASE"/resources/scripts/log_modder"\
+         ""$BASE"/resources/scripts/errors_modder"\
+         ""$BASE"/resources/scripts/remote_script"
+do B="/usr/local/bin/BACKUP.d/resources/scripts/$(echo "$A" | awk -F/ '{print $NF}')"
+   main
+done
+
+# Icon to $HOME/.misScripts
+A=""$BASE"/resources/backup.png"
+B=""$HOME"/.misScripts/icones/backup.png"
+main
+
+# Link to $HOME/.misScripts (to carry later to panel)
+A=""$BASE"/resources/Backup.desktop.[user-panel]"
+B=""$HOME"/.misScripts/accessos_directes/Backup.desktop"
+ICON_TEXT="Icon="$HOME"/.misScripts/icones/backup.png"
+BKP=""$HOME"/Documents/LINUX-tips/misScripts/accessos_directes/Backup.desktop"
+
+if [ -e "$B" ]
+then if [[ -z $(grep "$ICON_TEXT" "$B") ]]
+     then if [[ ! -z $(grep "Icon=" "$B") ]]
+          then sed -i 's/Icon=/#Icon=/' "$B"
+          fi
+          echo "$ICON_TEXT" >> "$B"
+          echo " >> [file]  "$B""
+     fi
+else cp -fr "$A" "$B"
+     echo "$ICON_TEXT" >> "$B"
+     echo " >  [file]  "$B""
+fi
+
+if [ -e "$BKP" ]
+then MD5_B=$(md5sum "$B" | cut -d' ' -f1)
+     MD5_BKP=$(md5sum "$BKP" | cut -d' ' -f1)
+     if [ "$MD5_B" != "$MD5_BKP" ]
+     then cp -fr "$B" "$BKP"
+     echo " >> [file]  "$BKP""
+     fi
+fi
+######################################################################
+
+# Link to main script
+TARGET="/usr/local/bin/BACKUP.d/backup_starter"
+tput sc
+TEST=$(ls -l /usr/local/bin/backup | awk -F"> " '{print $2}')
+tput rc; tput ed
+if [[ $TEST != $TARGET ]]
+then echo -en "\n >  [link] "
+     sudo ln -sfv $TARGET /usr/local/bin/backup
+fi
+######################################################################
+
+# Ending script
+sleep 0.5
+echo -e "\n\n  "$C_BLUE" FINISHED "$C_0" \n\n\n"
+sleep 1
+exit 0
