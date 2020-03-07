@@ -542,11 +542,11 @@ function THE_END()
 #__________________________________________________________
 function HELP()
 {
- echo -e "
-   \n USAGE:  backup [OPTION...] [SOURCE...] [DESTINATION...]"
+ echo -e "\n USAGE:  backup [OPTION...] [SOURCE...] [DESTINATION...]"
  echo -e " Options:  -c, --content\tSync only content, excluding source folder.
-           -h, --help\tShow this message and exit.\n\n"
+           -h, --help\t\tShow this message and exit.\n"
 
+ read -u3 -n1 -p " Press any key to exit"
  rm -frv "$WORKDIR" "$LOCK" >/dev/null
  exit
 
@@ -717,27 +717,10 @@ DEPENDENCES  # FUNCTION CALL
 # SOURCE/DESTINATION PARAMETERS WON'T BE PRESERVED FOR FUTURE BACKUPS.
 # IF THERE AREN'T SOURCE/DETINATION PARAMETERS 'backup.cfg' FILE WILL BE READED,
 # SEARCHING FOR LOCAL AND REMOTE DIRECTORIES (IN THAT ORDER).
-if [ "$1" == "--help" -o "$1" == "-h" ]
-then HELP  # FUNCTION CALL
 
-elif [ $# = 2 ]
-then SRC=$1
-     DEST=$2
-     PARAM_CHECK
+case $# in
 
-elif [ "$#" = 3 ] && [ "$1" = "--content" -o "$1" = "-c" ]
-then SRC=$2/
-     DEST=$3
-     PARAM_CHECK
-
-elif [ $# != 0 ]
-then setterm -cursor off
-      echo -e "\n"  $C_REDLIGHT"INCORRECT PARAMETERS"$C_0"\n\n"
-      sleep 2
-      HELP  # FUNCTION CALL
-
-
-else ## THERE AREN'T PARAMETERS
+  0) ## THERE AREN'T PARAMETERS
      TITLE          # FUNCTION CALL
      LOCAL_SEARCH   # FUNCTION CALL
      REMOTE_SEARCH  # FUNCTION CALL
@@ -760,7 +743,50 @@ else ## THERE AREN'T PARAMETERS
              let N+=1
           done
      fi
-fi
+     
+  ;;  
+  1) # ONLY "-h" OR "--help" OPTIONS ALLOWED
+     if ! [ "$1" == "--help" -o "$1" == "-h" ]
+     then tput sc
+          setterm -cursor off
+          echo -e "\n"  $C_REDLIGHT"OPTION \"$1\" NOT ALLOWED"$C_0""
+          sleep 2
+          setterm -cursor on
+          tput rc; tput ed
+     fi
+     HELP  # FUNCTION CALL
+
+  ;;
+  2) # 2 PARAMETERS:  SOURCE AND DESTINATION?
+     SRC=$1
+     DEST=$2
+     PARAM_CHECK
+
+  ;;
+  3) # 3 PARAMETERS 
+     if [ "$1" = "--content" -o "$1" = "-c" ]
+     then SRC=$2/
+          DEST=$3
+          PARAM_CHECK
+     else tput sc
+          setterm -cursor off
+          echo -e "\n"  $C_REDLIGHT"OPTION \"$1\" NOT ALLOWED"$C_0""
+          sleep 2
+          setterm -cursor on
+          tput rc; tput ed
+          HELP  # FUNCTION CALL
+     fi
+     
+  ;;
+  *) tput sc
+          setterm -cursor off
+          echo -e "\n"  $C_REDLIGHT"INCORRECT PARAMETERS"$C_0""
+          sleep 2
+          setterm -cursor on
+          tput rc; tput ed
+          HELP  # FUNCTION CALL
+esac
+
 ##############################################################################
 
 # ASK: WOULD YOU LIKE TO ADD NEW SOURCE/DESTINATION DIRECTORIES TO BACKUP?.

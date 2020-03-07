@@ -44,20 +44,11 @@ do if [ ! $(which $dep 2>/dev/null) ]
     fi
 done
 
-# EXECUTE 'backup' SCRIPT WITH OR WITHOUT PARAMETERS.
-if [ $# = 2 ]
-then screen -d -m xfce4-terminal\
+# EXECUTE 'backup' SCRIPT.
+screen -d -m xfce4-terminal\
             --geometry 100x68\
             --hide-menubar\
             --icon=$BASE/resources/backup.png\
             --title='BACKUP'\
-            --execute "$BASE"/backup "$1" "$2"
-
-else screen -d -m xfce4-terminal\
-            --geometry 100x68\
-            --hide-menubar\
-            --icon=$BASE/resources/backup.png\
-            --title='BACKUP'\
-            --execute "$BASE"/backup
-fi
+            --execute "$BASE"/backup "$@"
 exit 0
