@@ -103,12 +103,12 @@ A=""$BASE"/backup"
 B="/usr/local/bin/BACKUP.d/backup"
 main
 
-# Starter script
+# starter script
 A=""$BASE"/resources/backup_starter"
 B="/usr/local/bin/BACKUP.d/backup_starter"
 main
 
-# Icon to /usr/local/bin/BACKUP.d/resources
+# icon to /usr/local/bin/BACKUP.d/resources
 A=""$BASE"/resources/backup.png"
 B="/usr/local/bin/BACKUP.d/resources/backup.png"
 main
@@ -132,7 +132,7 @@ A=""$BASE"/resources/backup.png"
 B=""$HOME"/.misScripts/icones/backup.png"
 main
 
-# Link to $HOME/.misScripts (to carry later to panel)
+# 'desktop' file to $HOME/.misScripts (to carry later to panel)
 A=""$BASE"/resources/Backup.desktop.[user-panel]"
 B=""$HOME"/.misScripts/accessos_directes/Backup.desktop"
 ICON_TEXT="Icon="$HOME"/.misScripts/icones/backup.png"
@@ -172,7 +172,7 @@ then echo -en "\n >  [link] "
 fi
 ######################################################################
 
-# Ending script
+# Finishing script execution.
 sleep 0.5
 echo -e "\n\n  "$C_BLUE" FINISHED "$C_0" \n\n\n"
 sleep 1
