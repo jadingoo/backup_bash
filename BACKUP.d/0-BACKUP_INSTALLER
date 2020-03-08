@@ -104,7 +104,7 @@ B="/usr/local/bin/BACKUP.d/backup"
 main
 
 # starter script
-A=""$BASE"/resources/backup_starter"
+A=""$BASE"/resources/scripts/backup_starter"
 B="/usr/local/bin/BACKUP.d/backup_starter"
 main
 

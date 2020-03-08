@@ -3,4 +3,3 @@ Type=Application
 Terminal=true
 Exec=/usr/local/bin/backup
 Name=Backup
-Icon=/home/jose/.misScripts/icones/backup.png

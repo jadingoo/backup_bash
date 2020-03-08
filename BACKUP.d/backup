@@ -50,7 +50,7 @@ function DEPENDENCES()
 #__________________________________________________________
 PARAM_CHECK()
 {
- # CHECK PARAMETERS
+ ### CHECK PARAMETERS ###
 
  SRC_DEST_TYPE       # FUNCTION CALL
  TITLE               # FUNCTION CALL
@@ -94,12 +94,13 @@ PARAM_CHECK()
  fi
  ## INCORRECT PARAMETERS
  if [ "$CHECK" != Y ]
- then setterm -cursor off
-      echo -e "\n"  $C_REDLIGHT"INCORRECT SOURCE AND/OR DESTINATION"$C_0"\n\n"
-      sleep 3
+ then TITLE  # FUNCTION CALL
+      echo -e "\n"  $C_REDLIGHT"INCORRECT SOURCE AND/OR DESTINATION"$C_0"\n"
+      sleep 2
+      HELP  # FUNCTION CALL
+      read -u3 -n1 -p " Press any key to exit"
       rm -fr $WORKDIR
       rm "$LOCK"
-      setterm -cursor on
       exit 1
  fi
  unset CHECK CHECK_IP
@@ -179,27 +180,32 @@ function ENCODE()
 
  tput sc
  echo -e " ______________________________"
- echo -e " "$C_BL_LIGHT"Use the following directories?"$C_0"\n"
+ echo -e " "$C_BL_LIGHT"Use the following directories?"$C_0""
  echo -e "$SHOW_SRC"
  echo -e "$SHOW_DEST"
  echo -en "\n "$C_GR"Confirm [Y/n]:"$C_0" "
 
  read  -n1 CONFIRMDIR
  case $CONFIRMDIR in
-   y|Y|$INTRO) CONFIRMDIR=Y
-               tput cuu1
-               echo -en "\n "$C_GR"Confirm [Y/n]:"$C_0" Y"
-               DEL_F        # FUNCTION CALL
+   y|Y)    #CONFIRMDIR=Y
+           tput cuu1
+           echo -en "\n "$C_GR"Confirm [Y/n]:"$C_0" Y"
+           DEL_F        # FUNCTION CALL
    ;;
-   n|N)        tput cuu1
-               echo -en "\n "$C_GR"Confirm [Y/n]:"$C_0" N"
-               HIDE_D       # FUNCTION CALL
+   $INTRO) CONFIRMDIR=Y
+           tput cuu1; tput cuu1
+           echo -en "\n "$C_GR"Confirm [Y/n]:"$C_0" Y"
+           DEL_F        # FUNCTION CALL
    ;;
-   $ESC)       TITLE        # FUNCTION CALL
-               INT_HANDLER  # FUNCTION CALL
+   n|N)    tput cuu1
+           echo -en "\n "$C_GR"Confirm [Y/n]:"$C_0" N"
+           HIDE_D       # FUNCTION CALL
    ;;
-   *)          tput rc; tput ed;
-               ENCODE       # FUNCTION CALL
+   $ESC)   TITLE        # FUNCTION CALL
+           INT_HANDLER  # FUNCTION CALL
+   ;;
+   *)      tput rc; tput ed;
+           ENCODE       # FUNCTION CALL
  esac
 
  CODE=($(echo "$SIMULATION $CONFIRMDIR $DELETE $HIDE" | tr '[:lower:]' '[:upper:]'))
@@ -342,7 +348,7 @@ function ADD_DIRS()
    y|Y) echo -e "\b$(echo "$NEW_DIRS" | tr '[:lower:]' '[:upper:]')"
 
      # ASK FOR NEW SOURCE AND DESTINATION.
-     echo -en "\n\n"$C_BL2"  [?] "$C_BL"SRC :"$C_0" "
+     echo -en "\n"$C_BL2"  [?] "$C_BL"SRC :"$C_0" "
      read NEW_SRC
      echo -en ""$C_BL2"  [?] "$C_BL"DEST:"$C_0" "
      read NEW_DEST
@@ -399,7 +405,7 @@ CHECK_NEW_SRC()
  tput sc
  if [ -d "$SRC" ] && [ $(echo ${SRC: -1}) != "/" ]
  then echo -en "\n Source is a local directory.  You can:\
-         \n  "$C_GR"[y]"$C_0" Backup source \e[4mfolder\e[0m  into destination. (default)\
+         \n  "$C_GR"[Y]"$C_0" Backup source \e[4mfolder\e[0m  into destination. "$C_GR"(default)"$C_0"\
          \n  "$C_GR"[n]"$C_0" Backup source \e[4mcontent\e[0m into destination.\
          \n\n Do you want to backup source folder into destination? [Y/n]: "
       read -n1 VAR
@@ -415,7 +421,7 @@ CHECK_NEW_SRC()
  fi
 
  SRC_DEST_TYPE  # FUNCTION CALL
- tput cup 10 0
+ tput cup 9 0
  echo -e "$SHOW_SRC"
  echo -e "$SHOW_DEST"
  tput rc; tput ed
@@ -747,14 +753,11 @@ case $# in
   ;;  
   1) # ONLY "-h" OR "--help" OPTIONS ALLOWED
      if ! [ "$1" == "--help" -o "$1" == "-h" ]
-     then tput sc
-          setterm -cursor off
-          echo -e "\n"  $C_REDLIGHT"OPTION \"$1\" NOT ALLOWED"$C_0""
+     then TITLE  # FUNCTION CALL
+          echo -e "\n  "$C_REDLIGHT"$1: INCORRECT PARAMETER"$C_0""
           sleep 2
-          setterm -cursor on
-          tput rc; tput ed
      fi
-     HELP  # FUNCTION CALL
+     HELP   # FUNCTION CALL
 
   ;;
   2) # 2 PARAMETERS:  SOURCE AND DESTINATION?
@@ -768,23 +771,17 @@ case $# in
      then SRC=$2/
           DEST=$3
           PARAM_CHECK
-     else tput sc
-          setterm -cursor off
+     else TITLE  # FUNCTION CALL
           echo -e "\n"  $C_REDLIGHT"OPTION \"$1\" NOT ALLOWED"$C_0""
           sleep 2
-          setterm -cursor on
-          tput rc; tput ed
           HELP  # FUNCTION CALL
      fi
      
   ;;
-  *) tput sc
-          setterm -cursor off
-          echo -e "\n"  $C_REDLIGHT"INCORRECT PARAMETERS"$C_0""
-          sleep 2
-          setterm -cursor on
-          tput rc; tput ed
-          HELP  # FUNCTION CALL
+  *) TITLE  # FUNCTION CALL
+     echo -e "\n"  $C_REDLIGHT"INCORRECT PARAMETERS"$C_0""
+     sleep 2
+     HELP  # FUNCTION CALL
 esac
 
 ##############################################################################
