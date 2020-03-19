@@ -80,7 +80,7 @@ PARAM_CHECK()
 
       if [ "$CHECK" = Y ]
       then touch ""$WORKDIR"/a"
-           timeout 5 rsync -zzan ""$WORKDIR"/a" "$CHECK_IP:/tmp" &>/dev/null
+           rsync -zzan ""$WORKDIR"/a" "$CHECK_IP:/tmp" &>/dev/null
            if [ $? = 0 ]
            then F_SIMULATION   # FUNCTION CALL
                 TITLE          # FUNCTION CALL

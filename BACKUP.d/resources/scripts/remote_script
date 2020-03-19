@@ -78,7 +78,7 @@ function FUNCTION()
          # TRY TO CONNECT WITH REMOTE SOURCE OR DESTINATION.
          # IF CONNECT, STORE REMOTE ORIGIN/DESTINATION IN THE CORRECT TEXT FILE.
          if [ "$CHECK" = Y ]
-         then timeout 5 rsync -zzavhin ""$WORKDIR"/a" "$CHECK_IP:/tmp" &>/dev/null
+         then rsync -zzavhin ""$WORKDIR"/a" "$CHECK_IP:/tmp" &>/dev/null
               if [ $? = 0 ]
               then echo "$SRC"   >> ""$WORKDIR"/sources_list"
                    echo "$DEST"  >> ""$WORKDIR"/destinations_list"
