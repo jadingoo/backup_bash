@@ -70,9 +70,10 @@ DIRS=("/usr/local/man/man1"
       "/usr/local/bin/BACKUP.d"
       "/usr/local/bin/BACKUP.d/resources"
       "/usr/local/bin/BACKUP.d/resources/scripts"
-      "$HOME/.misScripts"
-      "$HOME/.misScripts/accessos_directes"
-      "$HOME/.misScripts/icones")
+      "$HOME/.user_scripts"
+      "$HOME/.user_scripts/scripts"
+      "$HOME/.user_scripts/accessos_directes"
+      "$HOME/.user_scripts/icones")
 
 for i in ${DIRS[@]}
 do if [ ! -d  "$i" ]
@@ -87,7 +88,6 @@ done
 
 BASE=$(dirname "$(readlink -f "$0")")
 echo""
-
 ######################################################################
 
 # A = SOURCE
@@ -127,15 +127,15 @@ do B="/usr/local/bin/BACKUP.d/resources/scripts/$(echo "$A" | awk -F/ '{print $N
    main
 done
 
-# Icon to $HOME/.misScripts
+# Icon to $HOME/.user_scripts
 A=""$BASE"/resources/backup.png"
-B=""$HOME"/.misScripts/icones/backup.png"
+B=""$HOME"/.user_scripts/icones/backup.png"
 main
 
-# 'desktop' file to $HOME/.misScripts (to carry later to panel)
+# 'desktop' file to $HOME/.user_scripts (to carry later to panel)
 A=""$BASE"/resources/Backup.desktop.[user-panel]"
-B=""$HOME"/.misScripts/accessos_directes/Backup.desktop"
-ICON_TEXT="Icon="$HOME"/.misScripts/icones/backup.png"
+B=""$HOME"/.user_scripts/accessos_directes/Backup.desktop"
+ICON_TEXT="Icon="$HOME"/.user_scripts/icones/backup.png"
 BKP=""$HOME"/Documents/LINUX-tips/misScripts/accessos_directes/Backup.desktop"
 
 if [ -e "$B" ]
