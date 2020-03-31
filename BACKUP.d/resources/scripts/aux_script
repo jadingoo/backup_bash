@@ -60,34 +60,39 @@ function FUNCTION()
 #________________________________________________
 ASK_CONFIRM()
 {
- tput sc
- echo -e "\n\n  _______________________________________\n"
+ echo -e "\n\n  _______________________________________\n\n\n\n\n"
+ tput cuu1; tput cuu1; tput cuu1; tput cuu1
  echo -e "  "$C_1"Press \"A\" to see summary in text editor."
  echo -en "  Confirm Changes [y/N]:"$C_0" "
  read -n1 CONFIRM
      case $CONFIRM in
-         a|A) screen -d -m gedit $PRELOG2
-              tput rc; tput ed; ASK_CONFIRM  # FUNCTION CALL
+         a|A) # OPEN PRELOG IN TEXT EDITO
+              tput cuu1; tput cuu1; tput cuu1; tput cuu1; tput cuu1; tput ed
+              screen -d -m gedit $PRELOG2
+              ASK_CONFIRM  # FUNCTION CALL
          ;;
          y|Y) # CONFIRM CHANGES.
-              tput rc; tput ed
+              tput cuu1; tput cuu1; tput cuu1; tput cuu1; tput cuu1; tput ed
               echo -e "\n\n  _______________________________________\n"
               echo -e "  "$C_1"Press \"A\" to see summary in text editor."
               echo -en "  Confirm Changes [y/N]:"$C_1" Y"; setterm -cursor off
               echo -e "$DEL '$SRC' '$DEST' | tee -a $RSYNC_OUTPUT"\
                    >> "$OK_RSYNC"
+              sleep 1.5
          ;;
          $INTRO|n|N)
               # DISCARD CHANGES
-              tput rc; tput ed
+              if [ "$CONFIRM" == "$INTRO" ]; then tput cuu1; fi
+              tput cuu1; tput cuu1; tput cuu1; tput cuu1; tput cuu1; tput ed
               echo -e "\n\n  _______________________________________\n"
               echo -e "  "$C_1"Press \"A\" to see summary in text editor."
               echo -en "  Confirm Changes [y/N]:"$C_1" N"; setterm -cursor off
-              echo -e "\n\n  "$C_GR_LIGHT"WON'T MAKE CHANGES"$C_0"\n"
+              echo -en "\n\n  "$C_GR_LIGHT"WON'T MAKE CHANGES"$C_0""
+              sleep 1.5
          ;;
-         *) tput rc; tput ed; ASK_CONFIRM  # FUNCTION CALL
+         *) tput cuu1; tput cuu1; tput cuu1; tput cuu1; tput cuu1; tput ed
+            ASK_CONFIRM  # FUNCTION CALL
      esac
- sleep 1.5
 }
 
 #################################################
