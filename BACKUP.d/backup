@@ -1,4 +1,4 @@
-#! /bin/bash 
+#! /bin/bash
 #__________________________________________________________
 function TITLE() {
  tput reset
@@ -749,8 +749,11 @@ case $# in
              let N+=1
           done
      fi
-     
-  ;;  
+
+     # ASK: WOULD YOU LIKE TO ADD NEW SOURCE/DESTINATION DIRECTORIES TO BACKUP?.
+     ADD_DIRS  # FUNCTION CALL
+
+  ;;
   1) # ONLY "-h" OR "--help" OPTIONS ALLOWED
      if ! [ "$1" == "--help" -o "$1" == "-h" ]
      then TITLE  # FUNCTION CALL
@@ -766,7 +769,7 @@ case $# in
      PARAM_CHECK
 
   ;;
-  3) # 3 PARAMETERS 
+  3) # 3 PARAMETERS
      if [ "$1" = "--content" -o "$1" = "-c" ]
      then SRC=$2/
           DEST=$3
@@ -776,7 +779,7 @@ case $# in
           sleep 2
           HELP  # FUNCTION CALL
      fi
-     
+
   ;;
   *) TITLE  # FUNCTION CALL
      echo -e "\n"  $C_REDLIGHT"INCORRECT PARAMETERS"$C_0""
@@ -785,9 +788,6 @@ case $# in
 esac
 
 ##############################################################################
-
-# ASK: WOULD YOU LIKE TO ADD NEW SOURCE/DESTINATION DIRECTORIES TO BACKUP?.
-ADD_DIRS  # FUNCTION CALL
 
 # EXECUTE 'aux_script' IF IT EXISTS.
 if [ -f $AUX_SCRIPT ]

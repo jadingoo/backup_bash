@@ -65,7 +65,7 @@ done
 
 ######################################################################
 
-# MAKE NEEDED DIRECTORIES IF IT DOESN'T EXIST.
+# MAKE NEEDED DIRECTORIES IF DOESN'T EXIST.
 DIRS=("/usr/local/man/man1"
       "/usr/local/bin/BACKUP.d"
       "/usr/local/bin/BACKUP.d/resources"
