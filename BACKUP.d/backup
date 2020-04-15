@@ -97,7 +97,7 @@ PARAM_CHECK()
  then TITLE  # FUNCTION CALL
       echo -e "\n"  $C_REDLIGHT"INCORRECT SOURCE AND/OR DESTINATION"$C_0"\n"
       sleep 2
-      HELP  # FUNCTION CALL
+      HELP   # FUNCTION CALL
       read -u3 -n1 -p " Press any key to exit"
       rm -fr $WORKDIR
       rm "$LOCK"
@@ -403,7 +403,7 @@ CHECK_NEW_SRC()
  ### CHECK IF MUST MAKE A BACKUP OF ITSELF OR ONLY OF ITS CONTENT.
 
  tput sc
- if [ -d "$SRC" ]
+ if [ -d "$SRC" ] && [ "$CONTENT" != "Y" ]
  then echo -en "\n Source is a local directory.  You can:\
          \n  "$C_GR"[Y]"$C_0" Backup source \e[4mfolder\e[0m  into destination. "$C_GR"(default)"$C_0"\
          \n  "$C_GR"[n]"$C_0" Backup source \e[4mcontent\e[0m into destination.\
@@ -417,12 +417,12 @@ CHECK_NEW_SRC()
         n|N) SRC="$SRC/"
         ;;
         *) tput rc; tput ed
-           CHECK_NEW_SRC      # FUNCTION CALL
+           CHECK_NEW_SRC  # FUNCTION CALL
       esac
       unset VAR
  fi
 
- SRC_DEST_TYPE  # FUNCTION CALL
+ SRC_DEST_TYPE            # FUNCTION CALL
  tput cup 9 0
  echo -e "$SHOW_SRC"
  echo -e "$SHOW_DEST"
@@ -550,11 +550,17 @@ function THE_END()
 #__________________________________________________________
 function HELP()
 {
+ TITLE        # FUNCTION CALL
  echo -e "\n USAGE:  backup [OPTION...] [SOURCE...] [DESTINATION...]"
  echo -e " Options:  -c, --content\tSync only content, excluding source folder.
            -h, --help\t\tShow this message and exit.\n"
+ echo -e " Tip \"man backup\" in terminal for more information.\n\n"
 
- read -u3 -n1 -p " Press any key to exit"
+ setterm -cursor off
+ echo " Press any key to exit"
+ echo " ====================="
+ read -u3 -n1
+ setterm -cursor on
  rm -frv "$WORKDIR" "$LOCK" >/dev/null
  exit
 
@@ -653,6 +659,7 @@ fi
 if [ $(which apt-get 2>/dev/null) ]
 then  DISTRO="debian"
       PKGMGR='sudo apt -y install'
+
 elif [ $(which pacman 2>/dev/null) ]
 then  DISTRO="arch"
       PKGMGR='sudo pacman --color=always --noconfirm -S'
@@ -753,7 +760,7 @@ case $# in
      fi
 
      # ASK: WOULD YOU LIKE TO ADD NEW SOURCE/DESTINATION DIRECTORIES TO BACKUP?.
-     ADD_DIRS  # FUNCTION CALL
+     ADD_DIRS    # FUNCTION CALL
 
   ;;
   1) # ONLY "-h" OR "--help" OPTIONS ALLOWED
@@ -762,7 +769,7 @@ case $# in
           echo -e "\n  "$C_REDLIGHT"$1: INCORRECT PARAMETER"$C_0""
           sleep 2
      fi
-     HELP   # FUNCTION CALL
+     HELP        # FUNCTION CALL
 
   ;;
   2) # 2 PARAMETERS:  SOURCE AND DESTINATION?
@@ -773,20 +780,25 @@ case $# in
   ;;
   3) # 3 PARAMETERS
      if [ "$1" = "--content" -o "$1" = "-c" ]
-     then SRC=$2/
+     then SRC=$(echo "$2" | sed "s;/$;;")/
           DEST=$3
-          PARAM_CHECK
-     else TITLE  # FUNCTION CALL
+          CONTENT=Y
+          PARAM_CHECK  # FUNCTION CALL
+
+     elif [ "$1" = "--help" -o "$1" = "-h" ]
+     then HELP         # FUNCTION CALL
+
+     else TITLE        # FUNCTION CALL
           echo -e "\n"  $C_REDLIGHT"OPTION \"$1\" NOT ALLOWED"$C_0""
           sleep 2
-          HELP  # FUNCTION CALL
+          HELP         # FUNCTION CALL
      fi
 
   ;;
   *) TITLE  # FUNCTION CALL
      echo -e "\n"  $C_REDLIGHT"INCORRECT PARAMETERS"$C_0""
      sleep 2
-     HELP  # FUNCTION CALL
+     HELP   # FUNCTION CALL
 esac
 
 ##############################################################################
