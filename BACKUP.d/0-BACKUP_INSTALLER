@@ -72,8 +72,8 @@ DIRS=("/usr/local/man/man1"
       "/usr/local/bin/BACKUP.d/resources/scripts"
       "$HOME/.user_scripts"
       "$HOME/.user_scripts/scripts"
-      "$HOME/.user_scripts/accessos_directes"
-      "$HOME/.user_scripts/icones")
+      "$HOME/.user_scripts/desktop_links"
+      "$HOME/.user_scripts/icons")
 
 for i in ${DIRS[@]}
 do if [ ! -d  "$i" ]
@@ -129,13 +129,13 @@ done
 
 # Icon to $HOME/.user_scripts
 A=""$BASE"/resources/backup.png"
-B=""$HOME"/.user_scripts/icones/backup.png"
+B=""$HOME"/.user_scripts/icons/backup.png"
 main
 
 # 'desktop' file to $HOME/.user_scripts (to carry later to panel)
 A=""$BASE"/resources/Backup.desktop.[user-panel]"
-B=""$HOME"/.user_scripts/accessos_directes/Backup.desktop"
-ICON_TEXT="Icon="$HOME"/.user_scripts/icones/backup.png"
+B=""$HOME"/.user_scripts/desktop_links/Backup.desktop"
+ICON_TEXT="Icon="$HOME"/.user_scripts/icons/backup.png"
 BKP=""$HOME"/Documents/LINUX-tips/misScripts/accessos_directes/Backup.desktop"
 
 if [ -e "$B" ]
