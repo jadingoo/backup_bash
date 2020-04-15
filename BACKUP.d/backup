@@ -403,11 +403,13 @@ CHECK_NEW_SRC()
  ### CHECK IF MUST MAKE A BACKUP OF ITSELF OR ONLY OF ITS CONTENT.
 
  tput sc
- if [ -d "$SRC" ] && [ $(echo ${SRC: -1}) != "/" ]
+ if [ -d "$SRC" ]
  then echo -en "\n Source is a local directory.  You can:\
          \n  "$C_GR"[Y]"$C_0" Backup source \e[4mfolder\e[0m  into destination. "$C_GR"(default)"$C_0"\
          \n  "$C_GR"[n]"$C_0" Backup source \e[4mcontent\e[0m into destination.\
          \n\n Do you want to backup source folder into destination? [Y/n]: "
+
+      SRC=$(echo "$SRC" | sed "s;/$;;")
       read -n1 VAR
       case $VAR in
         y|Y|$INTRO) >/dev/null
@@ -649,11 +651,11 @@ fi
 
  #+ DEBIAN? / ARCH?
 if [ $(which apt-get 2>/dev/null) ]
-then	DISTRO="debian"
-        PKGMGR='sudo apt -y install'
+then  DISTRO="debian"
+      PKGMGR='sudo apt -y install'
 elif [ $(which pacman 2>/dev/null) ]
-then	DISTRO="arch"
-        PKGMGR='sudo pacman --color=always --noconfirm -S'
+then  DISTRO="arch"
+      PKGMGR='sudo pacman --color=always --noconfirm -S'
 fi
 
 ### END OF VARIABLES SETTING ####
