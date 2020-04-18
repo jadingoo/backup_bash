@@ -136,7 +136,7 @@ main
 A=""$BASE"/resources/Backup.desktop.[user-panel]"
 B=""$HOME"/.user_scripts/desktop_links/Backup.desktop"
 ICON_TEXT="Icon="$HOME"/.user_scripts/icons/backup.png"
-BKP=""$HOME"/Documents/LINUX-tips/misScripts/accessos_directes/Backup.desktop"
+BKP=""$HOME"/Documents/LINUX-tips/misScripts/desktop_links/Backup.desktop"
 
 if [ -e "$B" ]
 then if [[ -z $(grep "$ICON_TEXT" "$B") ]]
