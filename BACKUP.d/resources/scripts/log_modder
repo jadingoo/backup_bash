@@ -33,7 +33,9 @@ function FUNCTION()
       tput reset
       echo -e "$SHOW_SRC"
       echo -e "$SHOW_DEST"
-      echo -e "\n\n  "$C_GR_BOLD"THERE AREN'T CHANGES"$C_0""
+      sleep 0.5
+      echo -e "\n\n  "$C_GR_BOLD"THERE'S NOTHING TO DO\n  ====================="$C_0"\n"
+      sleep 3
 
  else  NEED_CONFIRM=Y
       # COUNT THE NUMBER OF CHANGES GROUPED BY CATEGORIES.
@@ -103,11 +105,10 @@ function FUNCTION()
          fi
          let INDEX+=1
       done
- fi
 
- # SHOW SEPARATOR AFTER THE MODIFIED RSYNC OUTPUT.
- echo -e "  "$C_GR_BOLD"__________________________"$C_0"\n"
- if [ -f "$NO_NEED_CONFIRM" ]; then sleep 3; fi
+      # SHOW SEPARATOR AFTER THE MODIFIED RSYNC OUTPUT.
+      echo -e "  "$C_GR_BOLD"__________________________"$C_0"\n"
+ fi
 
 # MODIFIES 'summary' FILE TO SHOW IT IN COLUMNS.
  if [ -f "$SUMMARY" ]

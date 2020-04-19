@@ -493,8 +493,7 @@ function INT_HANDLER()
 {
  ### BREAKING SCRIPT EXECUTION (CTRL+C - ESC). ###
 
- echo -e "\n\n "$C_REDLIGHT" Script Interrupted $C_0
-          \r__________________________________________________\n\n"
+ echo -e "\n\n "$C_REDLIGHT" Script Interrupted $C_0\n\n\n"
  rm -fr $WORKDIR
 
  # CLEAR EMPTY DIRECTORIES INTO BACKUP_LOGS DIR.
