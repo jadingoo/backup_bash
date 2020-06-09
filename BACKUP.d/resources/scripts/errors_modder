@@ -77,7 +77,7 @@ function FUNCTION()
           >> "$ERRORS_LOG"
  echo -e "\t\t$(date "+%d/%m/%Y : %H:%M:%S")" >> "$ERRORS_LOG"
  echo -e "\t\t["$SRC_TYPE"] SRC --> $SRC"       >> "$ERRORS_LOG"
- echo -e "\t\t["$DEST_TYPE"] DEST ---> $DEST"   >> "$ERRORS_LOG"
+ echo -e "\t\t["$DEST_TYPE"] DEST -> $DEST"   >> "$ERRORS_LOG"
 
  # SHOW ERRORS IN STDOUT AND ADD THEM DO ERROR'S LOG AND 'err_list' FILES.
  # CREATES 'err_summary' FILE.

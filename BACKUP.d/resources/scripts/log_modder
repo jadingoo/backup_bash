@@ -91,7 +91,7 @@ function FUNCTION()
                >> "$PRELOG"
       echo -e "\t\t$(date "+%d/%m/%Y : %H:%M:%S")" >> "$PRELOG"
       echo -e "\t\t["$SRC_TYPE"] SRC --> $SRC" >> "$PRELOG"
-      echo -e "\t\t["$DEST_TYPE"] DEST ---> $DEST" >> "$PRELOG"
+      echo -e "\t\t["$DEST_TYPE"] DEST -> $DEST" >> "$PRELOG"
 
       # SHOW CHANGES IN STDOUT AND ADD THEM TO 'prelog' FILE.
       # CREATES 'summary' FILE.
