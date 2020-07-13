@@ -492,7 +492,7 @@ function REMOTE_SEARCH()
 function INT_HANDLER()
 {
  ### BREAKING SCRIPT EXECUTION (CTRL+C - ESC). ###
-
+ tput setab 0; tput ed
  echo -e "\n\n "$C_REDLIGHT" Script Interrupted $C_0\n\n\n"
  rm -fr $WORKDIR
 
@@ -833,10 +833,14 @@ then tput reset
 
              SRC_DEST_TYPE  # FUNCTION CALL
              tput reset
+             setterm -cursor off
              echo -e "$SHOW_SRC"
-             echo -e "$SHOW_DEST\n\n"
+             echo -e "$SHOW_DEST"
+             sleep 2
 
              # RUN RSYNC
+             tput cup 5 0
+             tput setab 4
              echo "rsync -zzavhi --log-format=\"[%t] %i %n %L\" $LINE"\
                    > "$WORKDIR"/aux
              bash "$WORKDIR"/aux
@@ -850,6 +854,7 @@ then tput reset
              echo "C_SRC=\"$C_SRC\""          >> $LOG_MODDER
              echo "C_DEST=\"$C_DEST\""        >> $LOG_MODDER
              echo "FUNCTION $RSYNC_OUTPUT"    >> $LOG_MODDER
+             sleep 2
              bash $LOG_MODDER
 
              ###################################################################
