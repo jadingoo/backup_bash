@@ -53,6 +53,7 @@ Installation via '0-BACKUP_INSTALLER' script creates the following structure:
 ### **Without Arguments**
 If "backup" is executed without arguments, the files or directories
 to be backed up will be added to 'backup.cfg' file.
+
 Next time that 'backup' runs, it will ask to user if he wants to back up
 the files / directories saved in 'backup.cfg'.
 
