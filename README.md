@@ -2,22 +2,20 @@
 BACKUP
 
 
-WHAT IS BACKUP?
-===============
+## WHAT IS BACKUP?
 "backup" is a set of scripts written in bash that are used to make
 incremental backups of your files.
 
 The program revolves around the rsync tool.
 You can back up files and / or directories:
- a)in local mode (between external hard drives, for example)
- b)in remote mode (backups between the local and a remote computer).
+ - a)in local mode (between external hard drives, for example)
+ - b)in remote mode (backups between the local and a remote computer).
 
 
-INSTALLATION
-===========
+## INSTALLATION
 The most recommended way to run 'backup' is by installing it through
 the script "0-BACKUP_INSTALLER":
- $ bash 0-BACKUP_INSTALLER
+ - $ bash 0-BACKUP_INSTALLER
 After this user only must write "backup" in a terminal.
 
 It is also possible to run 'backup' without installing it, opening a terminal
@@ -46,27 +44,26 @@ Installation via '0-BACKUP_INSTALLER' script creates the following structure:
                             └── remote_script
 
 
-EXECUTION
-=========
+## EXECUTION
 "backup" can be executed with or without arguments.
 
-- Without Arguments
+** Without Arguments **
 If "backup" is executed without arguments, the files or directories
 to be backed up will be added to 'backup.cfg' file.
 Next time that 'backup' runs, it will ask to user if he wants to back up
 the files / directories saved in 'backup.cfg'.
 
-- With Arguments
+** With Arguments **
 The arguments must correspond to SOURCE and DESTINATION.
-  $ backup SOURCE DESTINATION
-  $ bash backup SOURCE DESTINATION
+  - $ backup SOURCE DESTINATION
+  - $ bash backup SOURCE DESTINATION
 
 If "backup" is executed with arguments, the program won't remember them
 in future executions.
 
 "backup" supports options
- '-c' or '--content' (Only with ORIGIN / DESTINATION arguments)
- '-h' or '--help'
+ - **'_-c_' or '_--content_' (Only with ORIGIN / DESTINATION arguments)**
+ - **'_-h_' or '_--help_'**
 
 The '-c' or '--content' option will back up the SOURCE content to DESTINATION
 (instead of copying the ORIGIN folder in DESTINATION).
@@ -82,8 +79,7 @@ For a more detailed explanation, you can read the manual:
   - $ man backup
 
 
-REMOTE BACKUPS
-==============
+## REMOTE BACKUPS
 It is possible to make backups between 2 computers
 (local->remote or remote->local).
 
