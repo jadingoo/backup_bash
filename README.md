@@ -50,13 +50,13 @@ EXECUTION
 =========
 "backup" can be executed with or without arguments.
 
-# WITHOUT ARGUMENTS
+WITHOUT ARGUMENTS
 If "backup" is executed without arguments, the files or directories
 to be backed up will be added to 'backup.cfg' file.
 Next time that 'backup' runs, it will ask to user if he wants to back up
 the files / directories saved in 'backup.cfg'.
 
-# WITH ARGUMENTS
+WITH ARGUMENTS
 The arguments must correspond to SOURCE and DESTINATION.
   $ backup SOURCE DESTINATION
   $ bash backup SOURCE DESTINATION
@@ -70,8 +70,8 @@ in future executions.
 
 The '-c' or '--content' option will back up the SOURCE content to DESTINATION
 (instead of copying the ORIGIN folder in DESTINATION).
-  $ backup -c SOURCE DESTINATION
-  $ bash backup -c SOURCE DESTINATION 
+  - $ backup -c SOURCE DESTINATION
+  - $ bash backup -c SOURCE DESTINATION 
 
 In any case, when "backup" is executed with SOURCE and DESTINATION arguments
 and without '-c' or '--content' options, if SOURCE is a LOCAL directory the
@@ -79,7 +79,7 @@ program will ask to user if must back up the SOURCE folder or only its content.
 
 The '-h' or '--help' option displays 'backup' usage options.
 For a more detailed explanation, you can read the manual:
-  $ man backup
+  - $ man backup
 
 
 REMOTE BACKUPS
@@ -92,15 +92,15 @@ The remote machine must have the rsync package installed:
   - In Arch Linux systems based: $ sudo pacman -S rsync
   
 In addition, the sshd daemon must be active on the remote machine:
-  $ sudo systemctl start sshd
+  - $ sudo systemctl start sshd
 
 The syntax, in case you want to run "backup" with parameters
 between computers should be the following:
-  $ backup LOCAL_SOURCE remote_user@remote_IP:REMOTE_DESTINATION
-  $ backup remote_user@remote_IP:REMOTE_SOURCE LOCAL_DESTINATION
+  - $ backup LOCAL_SOURCE remote_user@remote_IP:REMOTE_DESTINATION
+  - $ backup remote_user@remote_IP:REMOTE_SOURCE LOCAL_DESTINATION
   
 
 Examples:
-  $ backup /home/pedro/Documents jose@192.168.0.10:/home/jose/Documents
-  $ backup jose@192.168.0.10:/home/jose/Documents /home/pedro/Documents
+  - $ backup /home/pedro/Documents jose@192.168.0.10:/home/jose/Documents
+  - $ backup jose@192.168.0.10:/home/jose/Documents /home/pedro/Documents
   
