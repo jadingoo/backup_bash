@@ -8,14 +8,15 @@ incremental backups of your files.
 
 The program revolves around the rsync tool.
 You can back up files and / or directories:
- - a)in local mode (between external hard drives, for example)
- - b)in remote mode (backups between the local and a remote computer).
+ - in local mode (between external hard drives, for example)
+ - in remote mode (backups between the local and a remote computer).
 
 
 ## INSTALLATION
 The most recommended way to run 'backup' is by installing it through
 the script "0-BACKUP_INSTALLER":
  - $ bash 0-BACKUP_INSTALLER
+ 
 After this user only must write "backup" in a terminal.
 
 It is also possible to run 'backup' without installing it, opening a terminal
@@ -23,9 +24,11 @@ and executing "bash backup" from the directory where the script is located.
 
 Installing 'backup' also creates a shortcut in the directory
 "$ HOME/.user_scripts/desktop_links".
+
 This allows user to run "backup" with a single click.
 In the event that user use xfce4 as desktop environment,
 can easily add this shortcut to the xfce4-panel.
+
 I don't know how to do this in other desktop environments.
 
 Installation via '0-BACKUP_INSTALLER' script creates the following structure:
